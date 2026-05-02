@@ -1,0 +1,68 @@
+#!/bin/bash
+# Install or uninstall the voice-input launchd agent.
+# Usage:
+#   ./install_launchd.sh          → install & start
+#   ./install_launchd.sh stop     → unload (stop for now)
+#   ./install_launchd.sh uninstall → remove permanently
+
+set -e
+
+DIR="$(cd "$(dirname "$0")" && pwd)"
+PLIST_DST="$HOME/Library/LaunchAgents/com.user.voice-input.plist"
+LABEL="com.user.voice-input"
+
+generate_plist() {
+    mkdir -p "$HOME/Library/LaunchAgents"
+    cat > "$PLIST_DST" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>$LABEL</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>$DIR/run.sh</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>$DIR/voice_input.log</string>
+    <key>StandardErrorPath</key>
+    <string>$DIR/voice_input.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+</dict>
+</plist>
+EOF
+}
+
+case "${1:-install}" in
+  install)
+    generate_plist
+    launchctl unload "$PLIST_DST" 2>/dev/null || true
+    launchctl load -w "$PLIST_DST"
+    echo "✓ Installed and started. Logs: $DIR/voice_input.log"
+    ;;
+  stop)
+    launchctl unload "$PLIST_DST" 2>/dev/null && echo "✓ Stopped (restarts at next login)."
+    ;;
+  uninstall)
+    launchctl unload "$PLIST_DST" 2>/dev/null || true
+    rm -f "$PLIST_DST"
+    echo "✓ Removed. Will no longer start at login."
+    ;;
+  *)
+    echo "Usage: $0 [install|stop|uninstall]"
+    exit 1
+    ;;
+esac
