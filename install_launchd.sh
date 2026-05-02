@@ -13,6 +13,11 @@ LABEL="com.user.voice-input"
 
 generate_plist() {
     mkdir -p "$HOME/Library/LaunchAgents"
+    local api_key_entry=""
+    if [ -n "$ANTHROPIC_API_KEY" ]; then
+        api_key_entry="        <key>ANTHROPIC_API_KEY</key>
+        <string>$ANTHROPIC_API_KEY</string>"
+    fi
     cat > "$PLIST_DST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -40,7 +45,7 @@ generate_plist() {
     <dict>
         <key>PATH</key>
         <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
-    </dict>
+$api_key_entry
 </dict>
 </plist>
 EOF

@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Hold Right Cmd to record speech. Right Option to cycle language mode."""
 import json
+import re
 import subprocess
 import threading
 import time
 from pathlib import Path
 
 import numpy as np
+import ollama
 import pyperclip
 import sounddevice as sd
 from faster_whisper import WhisperModel
@@ -16,44 +18,91 @@ from pynput.keyboard import Controller, Key
 SAMPLE_RATE = 16000
 MODEL_SIZE = "medium"
 MIN_RECORD_SEC = 0.3
+CLEANUP_MIN_WORDS = 5  # skip cleanup for short phrases
 RECORD_KEY = Key.cmd_r
 MODE_KEY = Key.alt_r
 
 PREFERRED_MICS = ["EMEET", "USB"]
 
-# task="translate" → always outputs English
-# task="transcribe" → outputs in the source language
 MODES = [
     {"key": "russian-english", "label": "ru→en", "task": "translate",  "language": "ru"},
     {"key": "russian-russian", "label": "ru→ru", "task": "transcribe", "language": "ru"},
     {"key": "english-russian", "label": "en→en", "task": "transcribe", "language": "en"},
 ]
 
-CONFIG_FILE = Path(__file__).parent / "voice-input-config.json"
+CONFIG_FILE = Path(__file__).parent.parent / "voice-input-config.json"
+
+# Regex filler patterns applied before Ollama
+_RU_FILLERS = re.compile(
+    r'\b(э+м?|м{2,}|ну\s+вот|как\s+бы|типа|короче|значит|вот)\b',
+    re.IGNORECASE,
+)
+_EN_FILLERS = re.compile(
+    r'\b(uh+m?|um+|you\s+know|basically|like)\b',
+    re.IGNORECASE,
+)
+
+config_lock = threading.Lock()
+mode_index = 1
+cleanup_enabled = False
+cleanup_model = "llama3.2"
 
 
-def load_mode_index() -> int:
-    if CONFIG_FILE.exists():
-        try:
-            cfg = json.loads(CONFIG_FILE.read_text())
-            for i, m in enumerate(MODES):
-                if cfg.get(m["key"]) is True:
-                    return i
-        except Exception:
-            pass
-    return 1  # default: russian-russian
+def _read_voice_cfg() -> dict:
+    raw = json.loads(CONFIG_FILE.read_text())
+    return raw.get("voiceInputConfig", raw)
+
+
+def load_config() -> None:
+    global mode_index, cleanup_enabled, cleanup_model
+    try:
+        vcfg = _read_voice_cfg()
+        new_index = mode_index
+        for i, m in enumerate(MODES):
+            if vcfg.get(m["key"]) is True:
+                new_index = i
+                break
+        with config_lock:
+            mode_index = new_index
+            cleanup_enabled = bool(vcfg.get("cleanup", False))
+            cleanup_model = vcfg.get("cleanup_model", "llama3.2")
+    except Exception as e:
+        print(f"Config load error: {e}")
 
 
 def save_mode(index: int) -> None:
-    cfg = {m["key"]: (i == index) for i, m in enumerate(MODES)}
-    CONFIG_FILE.write_text(json.dumps(cfg, indent=4))
+    try:
+        raw = json.loads(CONFIG_FILE.read_text())
+    except Exception:
+        raw = {}
+    vcfg = raw.get("voiceInputConfig", raw)
+    for i, m in enumerate(MODES):
+        vcfg[m["key"]] = (i == index)
+    if "voiceInputConfig" in raw:
+        raw["voiceInputConfig"] = vcfg
+    else:
+        raw = vcfg
+    CONFIG_FILE.write_text(json.dumps(raw, indent=4))
 
 
-mode_index = load_mode_index()
+def watch_config() -> None:
+    last_mtime = 0.0
+    while True:
+        time.sleep(2)
+        try:
+            mtime = CONFIG_FILE.stat().st_mtime
+            if mtime != last_mtime:
+                last_mtime = mtime
+                load_config()
+                m = current_mode()
+                print(f"Config reloaded → mode: {m['label']}, cleanup: {cleanup_enabled} ({cleanup_model})")
+        except Exception:
+            pass
 
 
 def current_mode() -> dict:
-    return MODES[mode_index]
+    with config_lock:
+        return MODES[mode_index]
 
 
 def notify(title: str, message: str) -> None:
@@ -82,14 +131,47 @@ def pick_input_device() -> tuple[int | None, str]:
     return None, default["name"]
 
 
+def cleanup_text(text: str, language: str, model: str) -> str:
+    # Step 1: regex — remove obvious fillers instantly
+    pattern = _RU_FILLERS if language == "ru" else _EN_FILLERS
+    text = pattern.sub("", text)
+    text = re.sub(r"\s{2,}", " ", text).strip()
+
+    if len(text.split()) < CLEANUP_MIN_WORDS:
+        return text
+
+    # Step 2: Ollama — fix grammar and punctuation
+    lang_name = "Russian" if language == "ru" else "English"
+    try:
+        resp = ollama.chat(
+            model=model,
+            messages=[{
+                "role": "user",
+                "content": (
+                    f"Clean up this {lang_name} speech transcript. "
+                    "Add punctuation, fix grammar. "
+                    "Return ONLY the cleaned text, no explanations.\n\n" + text
+                ),
+            }],
+        )
+        return resp["message"]["content"].strip()
+    except Exception as e:
+        print(f"Ollama cleanup error: {e}")
+        return text
+
+
+load_config()
+
 input_device, input_name = pick_input_device()
 print(f"Mic: {input_name}")
 print(f"Loading {MODEL_SIZE} model...")
 model = WhisperModel(MODEL_SIZE, device="cpu", compute_type="int8")
 
 m = current_mode()
-print(f"Ready. Mode: {m['label']} | Right Cmd = record | Right Option = cycle mode\n")
+print(f"Ready. Mode: {m['label']} | cleanup: {cleanup_enabled} | Right Cmd = record | Right Option = cycle mode\n")
 notify("Voice Input", f"Ready · {m['label']}")
+
+threading.Thread(target=watch_config, daemon=True).start()
 
 kb = Controller()
 state_lock = threading.Lock()
@@ -100,7 +182,8 @@ stream: sd.InputStream | None = None
 
 def cycle_mode() -> None:
     global mode_index
-    mode_index = (mode_index + 1) % len(MODES)
+    with config_lock:
+        mode_index = (mode_index + 1) % len(MODES)
     save_mode(mode_index)
     m = current_mode()
     print(f"Mode → {m['label']}")
@@ -168,14 +251,23 @@ def _transcribe_and_paste(audio: np.ndarray) -> None:
             vad_filter=True,
         )
         text = "".join(s.text for s in segments).strip()
-        elapsed = time.time() - t0
 
         if not text:
-            print(f"[{elapsed:.1f}s] (no speech detected)")
+            print(f"[{time.time() - t0:.1f}s] (no speech detected)")
             play("Funk")
             return
 
-        print(f"[{elapsed:.1f}s] [{m['label']}] {text}")
+        with config_lock:
+            do_cleanup = cleanup_enabled
+            model_name = cleanup_model
+
+        if do_cleanup:
+            text = cleanup_text(text, m["language"], model_name)
+
+        elapsed = time.time() - t0
+        tag = f"{m['label']}+clean" if do_cleanup else m['label']
+        print(f"[{elapsed:.1f}s] [{tag}] {text}")
+
         pyperclip.copy(text)
         time.sleep(0.05)
         with kb.pressed(Key.cmd):

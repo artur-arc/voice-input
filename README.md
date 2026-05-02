@@ -41,7 +41,18 @@ Right Option cycles through modes in order:
 | `ru→ru` | Russian speech → Russian text (transcription) |
 | `en→en` | English speech → English text (transcription) |
 
-The current mode is stored in `config.json` and persists across restarts.
+The current mode persists across restarts in [voice-input-config.json](voice-input-config.json). You can change it in two ways:
+
+- **At runtime** — press Right Option; the app cycles through modes and updates the file automatically.
+- **Manually** — open [voice-input-config.json](voice-input-config.json) and set exactly one key to `true`, the rest to `false`:
+
+```json
+{
+    "russian-english": false,
+    "russian-russian": true,
+    "english-russian": false
+}
+```
 
 ## Background service
 

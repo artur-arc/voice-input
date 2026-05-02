@@ -3,3 +3,4 @@ sounddevice>=0.4.6
 numpy>=1.24
 pyperclip>=1.8
 pynput>=1.7
+ollama>=0.3.0

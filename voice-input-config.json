@@ -1,5 +1,9 @@
 {
-    "russian-english": false,
-    "russian-russian": true,
-    "english-russian": false
+    "voiceInputConfig": {
+        "russian-english": false,
+        "russian-russian": true,
+        "english-russian": false,
+        "cleanup": true,
+        "cleanup_model": "llama3.1:8b"
+    }
 }
