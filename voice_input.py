@@ -176,11 +176,14 @@ def _transcribe_and_paste(audio: np.ndarray) -> None:
             return
 
         print(f"[{elapsed:.1f}s] [{m['name']}] {text}")
+        prev = pyperclip.paste()
         pyperclip.copy(text)
         time.sleep(0.05)
         with kb.pressed(Key.cmd):
             kb.press("v")
             kb.release("v")
+        time.sleep(0.1)
+        pyperclip.copy(prev)
         play("Pop")
     except Exception as e:
         print(f"Error: {e}")
