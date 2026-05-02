@@ -24,29 +24,29 @@ PREFERRED_MICS = ["EMEET", "USB"]
 # task="translate" → always outputs English
 # task="transcribe" → outputs in the source language
 MODES = [
-    {"name": "ru→en", "task": "translate",  "language": "ru"},
-    {"name": "ru→ru", "task": "transcribe", "language": "ru"},
-    {"name": "en→en", "task": "transcribe", "language": "en"},
+    {"key": "russian-english", "label": "ru→en", "task": "translate",  "language": "ru"},
+    {"key": "russian-russian", "label": "ru→ru", "task": "transcribe", "language": "ru"},
+    {"key": "english-russian", "label": "en→en", "task": "transcribe", "language": "en"},
 ]
 
-CONFIG_FILE = Path(__file__).parent / "config.json"
+CONFIG_FILE = Path(__file__).parent / "voice-input-config.json"
 
 
 def load_mode_index() -> int:
     if CONFIG_FILE.exists():
         try:
             cfg = json.loads(CONFIG_FILE.read_text())
-            name = cfg.get("mode", MODES[0]["name"])
             for i, m in enumerate(MODES):
-                if m["name"] == name:
+                if cfg.get(m["key"]) is True:
                     return i
         except Exception:
             pass
-    return 0
+    return 1  # default: russian-russian
 
 
 def save_mode(index: int) -> None:
-    CONFIG_FILE.write_text(json.dumps({"mode": MODES[index]["name"]}, indent=2))
+    cfg = {m["key"]: (i == index) for i, m in enumerate(MODES)}
+    CONFIG_FILE.write_text(json.dumps(cfg, indent=4))
 
 
 mode_index = load_mode_index()
@@ -88,8 +88,8 @@ print(f"Loading {MODEL_SIZE} model...")
 model = WhisperModel(MODEL_SIZE, device="cpu", compute_type="int8")
 
 m = current_mode()
-print(f"Ready. Mode: {m['name']} | Right Cmd = record | Right Option = cycle mode\n")
-notify("Voice Input", f"Ready · {m['name']}")
+print(f"Ready. Mode: {m['label']} | Right Cmd = record | Right Option = cycle mode\n")
+notify("Voice Input", f"Ready · {m['label']}")
 
 kb = Controller()
 state_lock = threading.Lock()
@@ -103,8 +103,8 @@ def cycle_mode() -> None:
     mode_index = (mode_index + 1) % len(MODES)
     save_mode(mode_index)
     m = current_mode()
-    print(f"Mode → {m['name']}")
-    notify("Voice Input", f"Mode: {m['name']}")
+    print(f"Mode → {m['label']}")
+    notify("Voice Input", f"Mode: {m['label']}")
     play("Tink")
 
 
@@ -175,15 +175,12 @@ def _transcribe_and_paste(audio: np.ndarray) -> None:
             play("Funk")
             return
 
-        print(f"[{elapsed:.1f}s] [{m['name']}] {text}")
-        prev = pyperclip.paste()
+        print(f"[{elapsed:.1f}s] [{m['label']}] {text}")
         pyperclip.copy(text)
         time.sleep(0.05)
         with kb.pressed(Key.cmd):
             kb.press("v")
             kb.release("v")
-        time.sleep(0.1)
-        pyperclip.copy(prev)
         play("Pop")
     except Exception as e:
         print(f"Error: {e}")
