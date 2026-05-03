@@ -132,6 +132,9 @@ class _MacTranscriber(Transcriber):
         return result["text"].strip() or None
 
 
+_WARM_UP_TIMEOUT = 300  # seconds — ctranslate2 can hang on certain CPUs
+
+
 class _WindowsTranscriber(Transcriber):
     """faster-whisper backend — Windows/CPU (int8 quantization)."""
 
@@ -151,15 +154,60 @@ class _WindowsTranscriber(Transcriber):
         return self._ready.is_set()
 
     def warm_up(self) -> None:
+        import threading
+        from pathlib import Path
         from faster_whisper import WhisperModel  # lazy — Windows only package
+
         try:
-            self._model = WhisperModel(self._model_name, device="cpu", compute_type="int8")
-            logger.info("Model loaded: %s", self._model_name)
+            cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
+            model_dir = cache_dir / f"models--Systran--faster-whisper-{self._model_name}"
+            logger.info("Checking model cache: %s", model_dir)
+
+            if not model_dir.exists():
+                self._load_error = (
+                    f"Model not found at {model_dir}. Re-run setup.py to download it."
+                )
+                logger.error(self._load_error)
+                return
+
+            logger.info("Model found in cache — loading (may take up to %ds)...", _WARM_UP_TIMEOUT)
+
+            # Run WhisperModel() in a sub-thread with a timeout.
+            # ctranslate2 can hang indefinitely on certain CPUs without raising an exception.
+            load_error: list[str] = []
+            loaded_model: list[Any] = []
+
+            def _load() -> None:
+                try:
+                    m = WhisperModel(self._model_name, device="cpu", compute_type="int8")
+                    loaded_model.append(m)
+                except Exception as exc:
+                    load_error.append(str(exc))
+                    logger.exception("Model load failed: %s", exc)
+
+            t = threading.Thread(target=_load, daemon=True)
+            t.start()
+            t.join(timeout=_WARM_UP_TIMEOUT)
+
+            if t.is_alive():
+                self._load_error = (
+                    f"Model load timed out after {_WARM_UP_TIMEOUT}s. "
+                    "ctranslate2 may not support this CPU. Try a different compute_type."
+                )
+                logger.error(self._load_error)
+            elif load_error:
+                self._load_error = load_error[0]
+            elif loaded_model:
+                self._model = loaded_model[0]
+                logger.info("Model loaded: %s", self._model_name)
+            else:
+                self._load_error = "Model load thread exited without result"
+                logger.error(self._load_error)
+
         except Exception as exc:
             self._load_error = str(exc)
-            logger.exception("Model load failed: %s", exc)
+            logger.exception("warm_up failed unexpectedly: %s", exc)
         finally:
-            # Always set the event so transcribe() never deadlocks waiting forever
             self._ready.set()
 
     def transcribe(self, audio: np.ndarray, mode: Mode) -> str | None:
