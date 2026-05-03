@@ -13,7 +13,7 @@ from pynput import keyboard
 from pynput.keyboard import Key
 
 from cleanup import TranscriptCleaner
-from paste_util import has_accessibility, paste_text
+from paste_util import accessibility_binary, has_accessibility, paste_text
 
 SAMPLE_RATE = 16000
 MODEL_REPO = "mlx-community/whisper-large-v3-mlx"
@@ -134,7 +134,7 @@ ax_ok = has_accessibility()
 print(f"Ready. Mode: {m['label']} | cleanup: {cleanup_enabled} | accessibility: {'✓' if ax_ok else '✗ (paste disabled)'}")
 if not ax_ok:
     print("  → Add to Accessibility: System Settings > Privacy & Security > Accessibility")
-    print(f"  → Binary: {Path('/opt/homebrew/opt/python@3.14/bin/python3.14').resolve()}")
+    print(f"  → Binary: {accessibility_binary()}")
 notify("Voice Input", f"Ready · {m['label']}" + ("" if ax_ok else " · no paste"))
 
 threading.Thread(target=watch_config, daemon=True).start()
