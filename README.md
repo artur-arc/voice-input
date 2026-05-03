@@ -97,6 +97,30 @@ Right Option cycles through the three modes in order:
 Note: Whisper's translate task only outputs English. A Russian-output translation mode is not
 possible with this model.
 
+## Microphone selection
+
+[Download select_mic.command](https://github.com/artur-arc/voice-input/raw/main/select_mic.command), then double-click it in Finder. Terminal opens and lists every available microphone with its current status:
+
+```text
+Voice Input — Microphone Selector
+────────────────────────────────────────
+
+Available microphones:
+
+  [0] Galaxy Buds3 (CD78)
+  [1] EMEET SmartCam S600  ← active
+  [2] MacBook Pro Microphone
+  [a] Auto-select (EMEET/USB › system default)
+
+Enter number or 'a' to auto-select [a]:
+```
+
+Enter the number of the device you want to pin, then press Enter. The choice is saved to `voice-input-config.json` and takes effect on the next recording — no restart needed.
+
+Pressing Enter without a number (or entering `a`) switches to auto-select: prefers any EMEET or USB device, falls back to the system default.
+
+Use this when connecting a Bluetooth headset or switching between multiple microphones.
+
 ## Configuration
 
 The active mode is stored in `voice-input-config.json`. The file is watched live — edits take
@@ -110,9 +134,12 @@ To change the mode manually, set exactly one key to `true` and the rest to `fals
         "english-english": true,
         "russian-english": false,
         "russian-russian": false
-    }
+    },
+    "input_device": null
 }
 ```
+
+`"input_device"` — device name string to pin a specific mic, or `null` for auto-select.
 
 Pressing Right Option at runtime has the same effect and updates the file automatically.
 
