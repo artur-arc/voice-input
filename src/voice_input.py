@@ -25,7 +25,7 @@ PREFERRED_MICS = ["EMEET", "USB"]
 MODES = [
     {"key": "russian-english", "label": "ru→en", "task": "translate",  "language": "ru"},
     {"key": "russian-russian", "label": "ru→ru", "task": "transcribe", "language": "ru"},
-    {"key": "english-russian", "label": "en→en", "task": "transcribe", "language": "en"},
+    {"key": "english-english", "label": "en→en", "task": "transcribe", "language": "en"},
 ]
 
 CONFIG_FILE = Path(__file__).parent.parent / "voice-input-config.json"

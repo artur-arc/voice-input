@@ -2,7 +2,6 @@
     "voiceInputConfig": {
         "russian-english": false,
         "russian-russian": true,
-        "english-russian": false,
         "english-english": false
     }
 }
