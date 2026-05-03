@@ -1,24 +1,23 @@
 #!/usr/bin/env python3
 """Hold Right Cmd to record speech. Right Option to cycle language mode."""
 import json
-import re
 import subprocess
 import threading
 import time
 from pathlib import Path
 
 import numpy as np
-import ollama
 import pyperclip
 import sounddevice as sd
 from faster_whisper import WhisperModel
 from pynput import keyboard
 from pynput.keyboard import Controller, Key
 
+from cleanup import TranscriptCleaner
+
 SAMPLE_RATE = 16000
 MODEL_SIZE = "medium"
 MIN_RECORD_SEC = 0.3
-CLEANUP_MIN_WORDS = 5  # skip cleanup for short phrases
 RECORD_KEY = Key.cmd_r
 MODE_KEY = Key.alt_r
 
@@ -32,20 +31,11 @@ MODES = [
 
 CONFIG_FILE = Path(__file__).parent.parent / "voice-input-config.json"
 
-# Regex filler patterns applied before Ollama
-_RU_FILLERS = re.compile(
-    r'\b(э+м?|м{2,}|ну\s+вот|как\s+бы|типа|короче|значит|вот)\b',
-    re.IGNORECASE,
-)
-_EN_FILLERS = re.compile(
-    r'\b(uh+m?|um+|you\s+know|basically|like)\b',
-    re.IGNORECASE,
-)
-
 config_lock = threading.Lock()
 mode_index = 1
 cleanup_enabled = False
 cleanup_model = "llama3.2"
+cleaner: TranscriptCleaner | None = None
 
 
 def _read_voice_cfg() -> dict:
@@ -54,7 +44,7 @@ def _read_voice_cfg() -> dict:
 
 
 def load_config() -> None:
-    global mode_index, cleanup_enabled, cleanup_model
+    global mode_index, cleanup_enabled, cleanup_model, cleaner
     try:
         vcfg = _read_voice_cfg()
         new_index = mode_index
@@ -66,6 +56,7 @@ def load_config() -> None:
             mode_index = new_index
             cleanup_enabled = bool(vcfg.get("cleanup", False))
             cleanup_model = vcfg.get("cleanup_model", "llama3.2")
+            cleaner = TranscriptCleaner(cleanup_model) if cleanup_enabled else None
     except Exception as e:
         print(f"Config load error: {e}")
 
@@ -129,36 +120,6 @@ def pick_input_device() -> tuple[int | None, str]:
                 return i, d["name"]
     default = sd.query_devices(kind="input")
     return None, default["name"]
-
-
-def cleanup_text(text: str, language: str, model: str) -> str:
-    # Step 1: regex — remove obvious fillers instantly
-    pattern = _RU_FILLERS if language == "ru" else _EN_FILLERS
-    text = pattern.sub("", text)
-    text = re.sub(r"\s{2,}", " ", text).strip()
-
-    if len(text.split()) < CLEANUP_MIN_WORDS:
-        return text
-
-    # Step 2: Ollama — fix grammar and punctuation
-    lang_name = "Russian" if language == "ru" else "English"
-    try:
-        resp = ollama.chat(
-            model=model,
-            messages=[{
-                "role": "user",
-                "content": (
-                    f"Clean up this {lang_name} speech transcript. "
-                    "Add punctuation, fix grammar. "
-                    "Return ONLY the cleaned text, no explanations.\n\n" + text
-                ),
-            }],
-        )
-        return resp["message"]["content"].strip()
-    except Exception as e:
-        print(f"Ollama cleanup error: {e}")
-        return text
-
 
 load_config()
 
@@ -243,12 +204,17 @@ def _transcribe_and_paste(audio: np.ndarray) -> None:
     m = current_mode()
     try:
         t0 = time.time()
+        initial_prompt = (
+            "Привет, давайте обсудим задачу." if m["language"] == "ru" else
+            "Let's discuss the task."
+        )
         segments, _ = model.transcribe(
             audio,
             task=m["task"],
             language=m["language"],
             beam_size=5,
             vad_filter=True,
+            initial_prompt=initial_prompt,
         )
         text = "".join(s.text for s in segments).strip()
 
@@ -258,18 +224,17 @@ def _transcribe_and_paste(audio: np.ndarray) -> None:
             return
 
         with config_lock:
-            do_cleanup = cleanup_enabled
-            model_name = cleanup_model
+            active_cleaner = cleaner
 
-        if do_cleanup:
-            text = cleanup_text(text, m["language"], model_name)
+        if active_cleaner is not None:
+            text = active_cleaner.clean(text, m["language"])
 
         elapsed = time.time() - t0
-        tag = f"{m['label']}+clean" if do_cleanup else m['label']
+        tag = f"{m['label']}+clean" if active_cleaner is not None else m['label']
         print(f"[{elapsed:.1f}s] [{tag}] {text}")
 
         pyperclip.copy(text)
-        time.sleep(0.05)
+        time.sleep(0.1)
         with kb.pressed(Key.cmd):
             kb.press("v")
             kb.release("v")

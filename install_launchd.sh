@@ -46,23 +46,34 @@ generate_plist() {
         <key>PATH</key>
         <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
 $api_key_entry
+    </dict>
 </dict>
 </plist>
 EOF
 }
 
+DOMAIN="gui/$(id -u)"
+
+load_agent() {
+    launchctl bootstrap "$DOMAIN" "$PLIST_DST" 2>/dev/null || launchctl load -w "$PLIST_DST" 2>/dev/null || true
+}
+
+unload_agent() {
+    launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || launchctl unload "$PLIST_DST" 2>/dev/null || true
+}
+
 case "${1:-install}" in
   install)
     generate_plist
-    launchctl unload "$PLIST_DST" 2>/dev/null || true
-    launchctl load -w "$PLIST_DST"
+    unload_agent
+    load_agent
     echo "✓ Installed and started. Logs: $DIR/voice_input.log"
     ;;
   stop)
-    launchctl unload "$PLIST_DST" 2>/dev/null && echo "✓ Stopped (restarts at next login)."
+    unload_agent && echo "✓ Stopped (restarts at next login)."
     ;;
   uninstall)
-    launchctl unload "$PLIST_DST" 2>/dev/null || true
+    unload_agent
     rm -f "$PLIST_DST"
     echo "✓ Removed. Will no longer start at login."
     ;;

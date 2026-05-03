@@ -3,7 +3,7 @@
         "russian-english": false,
         "russian-russian": true,
         "english-russian": false,
-        "cleanup": true,
+        "cleanup": false,
         "cleanup_model": "llama3.1:8b"
     }
 }
