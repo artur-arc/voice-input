@@ -40,7 +40,10 @@ NOTES="## Installation
 
 **Windows** — download \`voice-input-windows-$NEXT.zip\`, extract anywhere, double-click \`install.bat\`
 
-**macOS** — download \`install.command\`, double-click in Finder
+**macOS** — open Terminal (⌘Space → Terminal) and run:
+\`\`\`bash
+curl -fsSL https://raw.githubusercontent.com/artur-arc/voice-input/main/install.command | bash
+\`\`\`
 
 ## Changes
 

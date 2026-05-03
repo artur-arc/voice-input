@@ -73,6 +73,10 @@ class Transcriber(ABC):
     @abstractmethod
     def model_repo(self) -> str: ...
 
+    def is_ready(self) -> bool:
+        """Return True when the model is loaded and ready to transcribe."""
+        return True
+
     @abstractmethod
     def warm_up(self) -> None: ...
 
@@ -143,6 +147,9 @@ class _WindowsTranscriber(Transcriber):
     def model_repo(self) -> str:
         return self._model_name
 
+    def is_ready(self) -> bool:
+        return self._ready.is_set()
+
     def warm_up(self) -> None:
         from faster_whisper import WhisperModel  # lazy — Windows only package
         try:
@@ -160,7 +167,8 @@ class _WindowsTranscriber(Transcriber):
             return None
         if not self._ready.is_set():
             logger.info("Waiting for model to load...")
-            self._ready.wait(timeout=120)
+            self._ready.wait()  # wait indefinitely — audio must not be lost on slow machines
+            logger.info("Model ready — processing audio")
         if self._model is None:
             logger.error("Model unavailable (load error: %s)", self._load_error)
             return None

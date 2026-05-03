@@ -302,6 +302,7 @@ class VoiceInputTray:
     def _warm_up(self) -> None:
         try:
             self._transcriber.warm_up()
+            self._feedback.notify("Voice Input", "Model ready — voice input active")
         except Exception:
             logger.exception("Warm-up failed")
 
@@ -345,6 +346,8 @@ class VoiceInputTray:
     def _transcribe_and_paste(self, audio: Any) -> None:
         try:
             mode = self._config.current_mode()
+            if not self._transcriber.is_ready():
+                self._feedback.notify("Voice Input", "Recording saved — waiting for model to load…")
             text = self._transcriber.transcribe(audio, mode)
             if not text:
                 self._feedback.play("Funk")

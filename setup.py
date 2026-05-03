@@ -65,6 +65,15 @@ def _detect_win_model() -> str:
         return "small"      # ~150 MB model, 2–5 s on CPU
 
 
+def _hf_cache_dir() -> Path:
+    """Return the HuggingFace hub cache directory, respecting env overrides."""
+    if hf_home := os.environ.get("HF_HOME"):
+        return Path(hf_home) / "hub"
+    if hf_cache := os.environ.get("HUGGINGFACE_HUB_CACHE"):
+        return Path(hf_cache)
+    return Path.home() / ".cache" / "huggingface" / "hub"
+
+
 def _cached_win_model(cache_dir: Path) -> str | None:
     """Return the name of the currently cached faster-whisper model, or None."""
     for candidate in _WIN_MODELS:
@@ -142,7 +151,7 @@ def download_model() -> None:
         subprocess.run([str(VENV_PY), "-c", script], check=True, env=env)
     else:
         target = _detect_win_model()
-        cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
+        cache_dir = _hf_cache_dir()
         cache_dir.mkdir(parents=True, exist_ok=True)
         cached = _cached_win_model(cache_dir)
 
