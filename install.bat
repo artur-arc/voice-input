@@ -70,9 +70,9 @@ if exist "%INSTALL_DIR%\.git" (
     echo   ✓ Downloaded to %INSTALL_DIR%
 )
 
-:: ── Run Python installer ──────────────────────────────────────────────────────
+:: ── Run setup ─────────────────────────────────────────────────────────────────
 cd /d "%INSTALL_DIR%"
-python setup-windows.py
+python setup.py
 if errorlevel 1 goto :error
 goto :end
 

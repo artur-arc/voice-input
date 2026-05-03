@@ -1,10 +1,9 @@
 #!/bin/bash
-# Double-click this file to install Voice Input.
-# macOS opens it in Terminal automatically.
+# Universal installer — macOS (double-click in Finder) or Windows (run via Git Bash).
+# Handles Homebrew and Python installation (bash-only tasks), then delegates to setup.py.
 set -e
 
 REPO="https://github.com/artur-arc/voice-input.git"
-INSTALL_DIR="$HOME/voice-input"
 
 BOLD='\033[1m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 ok()   { echo -e "  ${GREEN}✓${NC} $1"; }
@@ -20,27 +19,72 @@ echo ""
 echo "  This will take a few minutes. Do not close this window."
 echo ""
 
-# ── Apple Silicon check ───────────────────────────────────────────────────────
-if [ "$(uname -m)" != "arm64" ]; then
-    fail "Apple Silicon (M1/M2/M3/M4) required. For Windows, use install.bat instead."
+# ── Platform detection ────────────────────────────────────────────────────────
+_OS="$(uname -s)"
+case "$_OS" in
+  Darwin)
+    PLATFORM="mac"
+    INSTALL_DIR="$HOME/voice-input"
+    ;;
+  MINGW*|MSYS*|CYGWIN*)
+    PLATFORM="windows"
+    INSTALL_DIR="$HOME/voice-input"   # Git Bash maps $HOME to %USERPROFILE%
+    ;;
+  *)
+    fail "Unsupported platform: $_OS. Supported: macOS and Windows (via Git Bash)."
+    ;;
+esac
+ok "Platform: $PLATFORM"
+
+# ── macOS: Apple Silicon + Homebrew + Python ──────────────────────────────────
+if [ "$PLATFORM" = "mac" ]; then
+    [ "$(uname -m)" != "arm64" ] && fail "Apple Silicon (M1/M2/M3/M4) required."
+
+    echo -e "${BOLD}── Homebrew${NC}"
+    if ! command -v brew &>/dev/null; then
+        echo "  Installing Homebrew..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        [[ -f /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
+    fi
+    ok "Homebrew ready"
+
+    echo -e "${BOLD}── Python${NC}"
+    PYTHON=""
+    for py in python3.14 python3.13 python3.12 python3.11 python3; do
+        if command -v "$py" &>/dev/null; then
+            MINOR=$("$py" -c "import sys; print(sys.version_info.minor)" 2>/dev/null)
+            [ "${MINOR:-0}" -ge 11 ] && PYTHON="$py" && break
+        fi
+    done
+    if [ -z "$PYTHON" ]; then
+        echo "  Python 3.11+ not found — installing via Homebrew..."
+        brew install python@3.12
+        hash -r
+        PYTHON=python3.12
+    fi
+    ok "Python $("$PYTHON" --version | awk '{print $2}')"
 fi
 
-# ── Homebrew ──────────────────────────────────────────────────────────────────
-echo -e "${BOLD}── Homebrew${NC}"
-if ! command -v brew &>/dev/null; then
-    echo "  Installing Homebrew..."
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    [[ -f /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
+# ── Windows: Python check ─────────────────────────────────────────────────────
+if [ "$PLATFORM" = "windows" ]; then
+    echo -e "${BOLD}── Python${NC}"
+    PYTHON=""
+    for candidate in python3 python; do
+        if command -v "$candidate" &>/dev/null; then
+            MINOR=$("$candidate" -c "import sys; print(sys.version_info.minor)" 2>/dev/null)
+            [ "${MINOR:-0}" -ge 11 ] && PYTHON="$candidate" && break
+        fi
+    done
+    [ -z "$PYTHON" ] && fail "Python 3.11+ not found. Install from https://www.python.org/downloads/ (check 'Add Python to PATH')"
+    ok "Python $("$PYTHON" --version | awk '{print $2}')"
 fi
-ok "Homebrew ready"
 
 # ── Git ───────────────────────────────────────────────────────────────────────
 if ! command -v git &>/dev/null; then
-    echo "  Installing git..."
-    brew install git
+    [ "$PLATFORM" = "mac" ] && brew install git || fail "Git not found. Install from https://git-scm.com/download/win"
 fi
 
-# ── Download project ──────────────────────────────────────────────────────────
+# ── Clone or update ───────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}── Downloading Voice Input${NC}"
 if [ -d "$INSTALL_DIR/.git" ]; then
@@ -48,15 +92,12 @@ if [ -d "$INSTALL_DIR/.git" ]; then
     git -C "$INSTALL_DIR" pull --ff-only
     ok "Updated"
 else
-    if [ -d "$INSTALL_DIR" ]; then
-        warn "$INSTALL_DIR exists but is not a git repo — removing..."
-        rm -rf "$INSTALL_DIR"
-    fi
+    [ -d "$INSTALL_DIR" ] && { warn "Removing existing directory..."; rm -rf "$INSTALL_DIR"; }
     echo "  Cloning..."
     git clone "$REPO" "$INSTALL_DIR"
     ok "Downloaded to $INSTALL_DIR"
 fi
 
-# ── Run main installer ────────────────────────────────────────────────────────
+# ── Run setup ─────────────────────────────────────────────────────────────────
 cd "$INSTALL_DIR"
-bash setup.sh
+"$PYTHON" setup.py
