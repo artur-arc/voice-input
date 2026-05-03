@@ -302,7 +302,14 @@ class VoiceInputTray:
     def _warm_up(self) -> None:
         try:
             self._transcriber.warm_up()
-            self._feedback.notify("Voice Input", "Model ready — voice input active")
+            if self._transcriber.is_ready() and self._transcriber._model is not None:  # type: ignore[attr-defined]
+                self._feedback.play("Pop")
+                self._feedback.notify("Voice Input", "Model ready — voice input active")
+                logger.info("Model ready — tray notified user")
+            else:
+                err = getattr(self._transcriber, "_load_error", "unknown error")
+                self._feedback.notify("Voice Input", f"Model failed to load: {err}")
+                logger.error("Model not ready after warm_up: %s", err)
         except Exception:
             logger.exception("Warm-up failed")
 

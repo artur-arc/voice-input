@@ -132,7 +132,8 @@ class _MacTranscriber(Transcriber):
         return result["text"].strip() or None
 
 
-_WARM_UP_TIMEOUT = 300  # seconds — ctranslate2 can hang on certain CPUs
+_INT8_TIMEOUT = 60    # seconds — int8 requires AVX2; fail fast on unsupported CPUs
+_FLOAT32_TIMEOUT = 240  # seconds — float32 is slower but works on any x86_64
 
 
 class _WindowsTranscriber(Transcriber):
@@ -170,13 +171,17 @@ class _WindowsTranscriber(Transcriber):
                 logger.error(self._load_error)
                 return
 
-            logger.info("Model found in cache — loading (may take up to %ds)...", _WARM_UP_TIMEOUT)
+            logger.info("Model found in cache — trying int8 then float32 if needed...")
 
             # Try int8 first (fastest), fall back to float32 if int8 hangs or fails.
             # ctranslate2 int8 requires AVX2/SSE4.2 and hangs on some CPUs silently.
+            timeouts = {"int8": _INT8_TIMEOUT, "float32": _FLOAT32_TIMEOUT}
             for compute_type in ("int8", "float32"):
+                timeout = timeouts[compute_type]
                 load_error: list[str] = []
                 loaded_model: list[Any] = []
+
+                logger.info("Trying compute_type=%s (timeout=%ds)...", compute_type, timeout)
 
                 def _load(ct: str = compute_type) -> None:
                     try:
@@ -188,12 +193,12 @@ class _WindowsTranscriber(Transcriber):
 
                 t = threading.Thread(target=_load, daemon=True)
                 t.start()
-                t.join(timeout=_WARM_UP_TIMEOUT)
+                t.join(timeout=timeout)
 
                 if t.is_alive():
                     logger.warning(
-                        "Model load timed out after %ds with compute_type=%s — trying next",
-                        _WARM_UP_TIMEOUT, compute_type,
+                        "compute_type=%s timed out after %ds — trying next",
+                        compute_type, timeout,
                     )
                     continue  # try next compute_type; hung thread stays as daemon
 
