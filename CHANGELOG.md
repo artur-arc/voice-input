@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
-- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`125c407`](https://github.com/artur-arc/voice-input/commit/125c407a40918d546499919aebae88ead300b0cc) Validate model.bin size to prevent ctranslate2
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`d2b4079`](https://github.com/artur-arc/voice-input/commit/d2b40792e3a0c8a8ac7268e1c17cee09a81e55c1) Validate model.bin size to prevent ctranslate2
 
 ## v1.0.30 — 2026-05-03
 ### 2026-05-03
