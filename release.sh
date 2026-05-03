@@ -9,15 +9,6 @@ TAG="v$NEXT"
 
 echo "Releasing: $CURRENT → $NEXT"
 
-# ── Check working tree is clean (except VERSION/CHANGELOG) ───────────────────
-DIRTY=$(git status --porcelain | grep -v "^??" | grep -v "VERSION" | grep -v "CHANGELOG.md" || true)
-if [ -n "$DIRTY" ]; then
-  echo "❌ Working tree has uncommitted changes:"
-  echo "$DIRTY"
-  echo "Commit or stash them before releasing."
-  exit 1
-fi
-
 # ── Bump version ──────────────────────────────────────────────────────────────
 echo "$NEXT" > VERSION
 
@@ -26,8 +17,8 @@ touch .git/hooks/.cliff-running
 git-cliff --config cliff.toml --tag "$TAG" -o CHANGELOG.md
 rm -f .git/hooks/.cliff-running
 
-# ── Stage & commit ────────────────────────────────────────────────────────────
-git add VERSION CHANGELOG.md
+# ── Stage everything & commit ─────────────────────────────────────────────────
+git add -A
 git commit -m "chore: release $TAG"
 
 # ── Tag ───────────────────────────────────────────────────────────────────────
@@ -39,7 +30,7 @@ git push origin "$TAG"
 
 # ── Build Windows zip asset ───────────────────────────────────────────────────
 ZIP_NAME="voice-input-$NEXT-windows.zip"
-zip -r "$ZIP_NAME" src/ assets/ requirements-windows.txt VERSION voice-input-config.json \
+zip -r "$ZIP_NAME" src/ assets/ requirements-windows.txt VERSION voice-input-config.json setup.py \
   -x "src/__pycache__/*" -x "src/*.pyc" -x "*/.DS_Store"
 
 # ── GitHub release with notes from this version's CHANGELOG section ───────────
