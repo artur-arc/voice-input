@@ -22,7 +22,7 @@ echo ""
 
 # ── Apple Silicon check ───────────────────────────────────────────────────────
 if [ "$(uname -m)" != "arm64" ]; then
-    fail "Apple Silicon (M1/M2/M3/M4) required — Intel is not supported."
+    fail "Apple Silicon (M1/M2/M3/M4) required. For Windows, use install.bat instead."
 fi
 
 # ── Homebrew ──────────────────────────────────────────────────────────────────

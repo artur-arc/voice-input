@@ -1,3 +1,4 @@
+# macOS only — for Windows see requirements-windows.txt
 mlx-whisper
 sounddevice>=0.4.6
 numpy>=1.24

@@ -6,15 +6,29 @@ A microphone icon in the menu bar gives access to all settings. <kbd>⌥ Right O
 Runs as a background launchd service on Apple Silicon Macs. Uses mlx-whisper with the
 `whisper-large-v3-mlx` model, which runs entirely on the Neural Engine.
 
+Supported on macOS (Apple Silicon) and Windows (x86_64). Requirements and installation
+differ by platform — see the sections below.
+
 ## Requirements
+
+### macOS requirements
 
 - Apple Silicon Mac (arm64 only — mlx-whisper does not run on Intel)
 - macOS 12+
 - Python 3.11+ (`setup.sh` installs it via Homebrew if missing)
 - ~2 GB of disk space for the model and virtual environment
-- Three macOS permissions: Microphone, Input Monitoring, Accessibility
+- Three permissions: Microphone, Input Monitoring, Accessibility
+
+### Windows requirements
+
+- Windows 10 or later, x86_64
+- Python 3.11+ (`setup-windows.py` installs it if missing)
+- ~2 GB of disk space for the model and virtual environment
+- One permission: Microphone (Windows Settings → Privacy & Security → Microphone)
 
 ## Installation
+
+### macOS installation
 
 **Option A (recommended):** [Download install.command](https://raw.githubusercontent.com/artur-arc/voice-input/main/install.command), then double-click it in Finder. macOS opens Terminal and runs the full install automatically. No Terminal knowledge needed. *(If the file opens as text in your browser, right-click the link → Save Link As)*
 
@@ -34,7 +48,19 @@ agent so the service starts automatically at login.
 When the permission prompts appear, find `python` or `Terminal` in each System Settings pane
 and enable the toggle.
 
+### Windows installation
+
+1. [Download install.bat](https://raw.githubusercontent.com/artur-arc/voice-input/main/install.bat)
+   *(if it opens as text in your browser, right-click the link → Save Link As)*
+2. Double-click `install.bat`. A terminal window opens and runs the setup automatically.
+3. Wait about 5 minutes while the Whisper model downloads (~1.5 GB).
+4. When setup finishes, a voice-input icon appears in the system tray (bottom-right corner).
+
+> After installation the app starts automatically at every login — no action needed after a reboot.
+
 ## Permissions
+
+### macOS permissions
 
 All three permissions must be granted to **python3** — the binary at `~/voice-input/.venv/bin/python3`. This is the process that runs the voice input service. Terminal only appears in the permission lists if you ran the installer manually; the launchd service itself runs as Python.
 
@@ -76,14 +102,23 @@ After granting any permission, restart the service:
 ./install_launchd.sh install
 ```
 
+### Windows permissions
+
+Only Microphone access is required. No special steps are needed for hotkey detection or
+text pasting on Windows.
+
+Open Settings → Privacy & Security → Microphone and enable access for the app if it was not
+granted during installation.
+
 ## Hotkeys
 
-| Key | Action |
-|---|---|
-| <kbd>⌘ Right Cmd</kbd> (hold → release) | Record audio, transcribe, paste |
-| <kbd>⌥ Right Option</kbd> (tap) | Cycle language modes (secondary) |
+| Action | macOS | Windows |
+|---|---|---|
+| Record audio, transcribe, paste | <kbd>⌘ Right Cmd</kbd> (hold → release) | <kbd>Right Ctrl</kbd> (hold → release) |
+| Cycle language modes | <kbd>⌥ Right Option</kbd> (tap) | — |
 
-Language mode and microphone can also be changed from the menu bar icon.
+Language mode and microphone can also be changed from the menu bar icon (macOS) or system
+tray icon (Windows).
 
 Audio feedback: Tink on recording start, Pop on success, Funk on error.
 A macOS notification appears on mode change and at startup.

@@ -25,6 +25,10 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> None:
+    if sys.platform == "win32":
+        from tray_windows import main as _win_main
+        _win_main()
+        return
     config = ConfigManager(CONFIG_FILE)
     recorder = AudioRecorder()
     transcriber = Transcriber(MODEL_REPO)
