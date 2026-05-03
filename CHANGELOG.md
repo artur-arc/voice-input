@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
-- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`f8a09be`](https://github.com/artur-arc/voice-input/commit/f8a09be12302658819c375fa46c6fcc63a36583c) Cache HuggingFace models in user directory
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`5145d7a`](https://github.com/artur-arc/voice-input/commit/5145d7a606e714534b26a887be11fdf277188789) Cache HuggingFace models in user directory
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`493ef62`](https://github.com/artur-arc/voice-input/commit/493ef625f65d712883b808703dea3cf34c28aa29) Ensure unique download script file for parallel installs
 
 ## v1.0.22 — 2026-05-03
