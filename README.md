@@ -11,35 +11,34 @@ macOS uses mlx-whisper on Apple Silicon (Neural Engine). Windows uses faster-whi
 |---|---|---|
 | Hardware | Apple Silicon (M1/M2/M3/M4) | x86_64 |
 | OS | macOS 12+ | Windows 10+ |
-| Python | installed automatically | 3.11+ — install from [python.org](https://www.python.org/downloads/), check *Add Python to PATH* |
-| Git | installed automatically | install from [git-scm.com](https://git-scm.com/download/win) |
+| Python | installed automatically | installed automatically |
+| Git | installed automatically | — |
 | Disk | ~2 GB | ~2 GB |
 
 ## Installation
 
 ### macOS
 
-1. Press <kbd>⌘</kbd><kbd>Space</kbd>, type `Terminal`, press Enter
+1. Press <kbd>⌘</kbd><kbd>Space</kbd>, type `Terminal`, press Enter.
 2. Paste this command and press Enter:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/artur-arc/voice-input/main/install.command | bash
 ```
 
-The script installs everything automatically — no Gatekeeper warnings, no extra steps.
+The script installs Python, downloads the Whisper model (~1.5 GB), registers autostart, and opens
+the permission dialogs for Microphone, Input Monitoring, and Accessibility. When it finishes, a
+microphone icon appears in the menu bar and the app starts at every login.
 
 ### Windows
 
 [**Download install.bat**](https://raw.githubusercontent.com/artur-arc/voice-input/main/install.bat)
 *(if it opens as text in your browser, right-click the link → Save Link As)*
 
-Double-click `install.bat`. The installer detects and installs Python automatically if needed.
-
----
-
-Both installers download the Whisper model (~1.5 GB), register autostart, and open permission settings where needed.
-
-> After installation the app starts automatically at every login.
+Double-click `install.bat`. The installer downloads and installs Python 3.12, downloads the Whisper
+model (~1.5 GB), and registers autostart. When it finishes, a microphone icon appears in the system
+tray and the app starts at every login. After installation, grant microphone access when Windows
+prompts — or follow the steps in the Permissions section below if the prompt was missed.
 
 ## Permissions
 
@@ -87,11 +86,11 @@ After granting any permission, restart the service:
 
 ### Windows permissions
 
-Only Microphone access is required. No special steps are needed for hotkey detection or
-text pasting on Windows.
+Microphone is the only permission required on Windows. No special steps are needed for hotkey
+detection or text pasting.
 
-Open Settings → Privacy & Security → Microphone and enable access for the app if it was not
-granted during installation.
+If the app is not recording, open **Settings → Privacy & Security → Microphone** and check that
+"Microphone access" is on and the app is listed and allowed.
 
 ## Hotkeys
 

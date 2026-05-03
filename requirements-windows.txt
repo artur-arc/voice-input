@@ -6,5 +6,5 @@ pynput>=1.7
 pystray>=0.19
 pillow>=10.0
 plyer>=2.1
-pywin32>=306
+keyboard>=0.13
 pyperclip>=1.8

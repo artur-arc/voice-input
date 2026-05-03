@@ -1,7 +1,8 @@
 """Hold Right Cmd to record speech. Right Option to cycle language mode."""
 import os
 
-# Must be set before any library imports tqdm or huggingface_hub.
+# Must be set before any ctranslate2/tqdm/huggingface_hub import.
+os.environ.setdefault("CT2_FORCE_CPU_ISA", "GENERIC")
 os.environ.setdefault("TQDM_DISABLE", "1")
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 

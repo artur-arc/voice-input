@@ -1,4 +1,4 @@
-"""Paste text at cursor — macOS uses CGEvent/NSPasteboard, Windows uses SendInput/win32clipboard."""
+"""Paste text at cursor — macOS uses CGEvent/NSPasteboard, Windows uses SendInput/ctypes clipboard."""
 from __future__ import annotations
 
 import logging
@@ -106,20 +106,37 @@ def _win_paste(text: str) -> bool:
         _win_send_ctrl_v()
         return True
     except Exception:
-        logger.exception("Windows paste failed")
-        return False
+        logger.warning("Ctrl+V paste failed — falling back to keyboard.write()")
+        return _win_keyboard_write(text)
 
 
 def _win_write_clipboard(text: str) -> None:
+    # Pure ctypes — no pywin32 required.
+    import ctypes
+    CF_UNICODETEXT = 13
+    GMEM_MOVEABLE = 0x0002
+    encoded = (text + "\x00").encode("utf-16-le")
+    h = ctypes.windll.kernel32.GlobalAlloc(GMEM_MOVEABLE, len(encoded))
+    ptr = ctypes.windll.kernel32.GlobalLock(h)
+    ctypes.memmove(ptr, encoded, len(encoded))
+    ctypes.windll.kernel32.GlobalUnlock(h)
+    if not ctypes.windll.user32.OpenClipboard(0):
+        raise OSError("OpenClipboard failed")
     try:
-        import win32clipboard  # pywin32 — lazy import
-        win32clipboard.OpenClipboard()
-        win32clipboard.EmptyClipboard()
-        win32clipboard.SetClipboardText(text, win32clipboard.CF_UNICODETEXT)
-        win32clipboard.CloseClipboard()
-    except ImportError:
-        import pyperclip  # fallback if pywin32 unavailable
-        pyperclip.copy(text)
+        ctypes.windll.user32.EmptyClipboard()
+        ctypes.windll.user32.SetClipboardData(CF_UNICODETEXT, h)
+    finally:
+        ctypes.windll.user32.CloseClipboard()
+
+
+def _win_keyboard_write(text: str) -> bool:
+    try:
+        import keyboard  # type: ignore[import]
+        keyboard.write(text, delay=0.008)
+        return True
+    except Exception:
+        logger.exception("keyboard.write fallback failed")
+        return False
 
 
 def _win_send_ctrl_v() -> None:

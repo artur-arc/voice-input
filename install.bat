@@ -3,8 +3,8 @@ setlocal enabledelayedexpansion
 
 set "INSTALL_DIR=%USERPROFILE%\voice-input"
 set "GITHUB_REPO=artur-arc/voice-input"
-set "PYTHON_VER=3.13.3"
-set "PYTHON_URL=https://www.python.org/ftp/python/3.13.3/python-3.13.3-amd64.exe"
+set "PYTHON_VER=3.12.9"
+set "PYTHON_URL=https://www.python.org/ftp/python/3.12.9/python-3.12.9-amd64.exe"
 
 cls
 echo.
@@ -36,11 +36,11 @@ if defined PYTHON (
 )
 echo.
 
-:: ── Auto-install Python 3.13 ──────────────────────────────────────────────────
+:: ── Auto-install Python 3.12 ──────────────────────────────────────────────────
 winget --version >nul 2>&1
 if not errorlevel 1 (
     echo  Trying winget...
-    winget install --id Python.Python.3.13 -e --silent --scope user ^
+    winget install --id Python.Python.3.12 -e --silent --scope user ^
         --accept-package-agreements --accept-source-agreements
     if not errorlevel 1 (
         call :refresh_path
