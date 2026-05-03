@@ -62,8 +62,9 @@ def install_packages() -> None:
         [str(VENV_PY), "-m", "pip", "install", "--quiet", "--upgrade", "pip"],
         check=True,
     )
+    print("  Installing packages (ctranslate2 is ~150 MB — please wait)...")
     subprocess.run(
-        [str(VENV_PY), "-m", "pip", "install", "--quiet", "-r", str(REQUIREMENTS)],
+        [str(VENV_PY), "-m", "pip", "install", "--progress-bar", "on", "-r", str(REQUIREMENTS)],
         check=True,
     )
     ok("All packages installed")

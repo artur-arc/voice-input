@@ -3,6 +3,11 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`a2ee6e3`](https://github.com/artur-arc/voice-input/commit/a2ee6e3e09a6e6f5250e29d96266f0605c8b7db8) Update Russian translation settings
+
+## v1.0.6 — 2026-05-03
+### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`872f7fc`](https://github.com/artur-arc/voice-input/commit/872f7fc6eba799a4efdd5402bdb0997babc8e73c) Release v1.0.6
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`ef152ba`](https://github.com/artur-arc/voice-input/commit/ef152bae41da7bf8a737f8ddee6b49239de27083) Use python -m pip for package installation
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`dedc358`](https://github.com/artur-arc/voice-input/commit/dedc358863a1792d42e0a766bf533c7ba5b1cf78) Simplify path refresh logic
 
