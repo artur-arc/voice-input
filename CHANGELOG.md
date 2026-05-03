@@ -3,7 +3,8 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`146418b`](https://github.com/artur-arc/voice-input/commit/146418b7d20d18326a8fd8637215ea28637d7a0f) Simplify path refresh logic
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`970ce48`](https://github.com/artur-arc/voice-input/commit/970ce48f203b41eed038b301fabac2af17e9f8c4) Use python -m pip for package installation
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`dedc358`](https://github.com/artur-arc/voice-input/commit/dedc358863a1792d42e0a766bf533c7ba5b1cf78) Simplify path refresh logic
 
 ## v1.0.5 — 2026-05-03
 ### 2026-05-03

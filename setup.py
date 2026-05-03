@@ -59,11 +59,11 @@ def create_venv() -> None:
 
 def install_packages() -> None:
     subprocess.run(
-        [str(VENV_PIP), "install", "--quiet", "--upgrade", "pip"],
+        [str(VENV_PY), "-m", "pip", "install", "--quiet", "--upgrade", "pip"],
         check=True,
     )
     subprocess.run(
-        [str(VENV_PIP), "install", "--quiet", "-r", str(REQUIREMENTS)],
+        [str(VENV_PY), "-m", "pip", "install", "--quiet", "-r", str(REQUIREMENTS)],
         check=True,
     )
     ok("All packages installed")
