@@ -72,10 +72,9 @@ def install_packages() -> None:
 
 def download_model() -> None:
     env = os.environ.copy()
-    # Suppress symlinks warning (Windows doesn't support them by default)
     env["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
-    # Suppress unauthenticated HF Hub warning
     env["HF_HUB_DISABLE_IMPLICIT_TOKEN"] = "1"
+    env["PYTHONUNBUFFERED"] = "1"
 
     if IS_MAC:
         cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
@@ -89,16 +88,47 @@ def download_model() -> None:
             f"path_or_hf_repo='{_MAC_MODEL}', language='ru', verbose=False); "
             "print('  Model ready.')"
         )
+        subprocess.run([str(VENV_PY), "-c", script], check=True, env=env)
     else:
+        cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
+        if cache_dir.exists() and any(cache_dir.glob("*faster-whisper-large-v3*")):
+            ok("Model already cached")
+            return
         print("  Downloading faster-whisper large-v3 (~1.5 GB) — this takes a few minutes...")
-        print("  Do not close this window. Progress will appear below:")
-        script = (
-            "from faster_whisper import WhisperModel; import numpy as np; "
-            f"m = WhisperModel('{_WIN_MODEL}', device='cpu', compute_type='int8'); "
-            "segs, _ = m.transcribe(np.zeros(16000, dtype='float32'), language='en'); "
-            "list(segs); print('  Model ready.')"
+        # Write a script file: tqdm must be patched before faster_whisper is imported
+        # so that huggingface_hub picks up our subclass (which forces disable=False).
+        dl = REPO_DIR / "_dl.py"
+        dl.write_text(
+            "import sys, tqdm\n"
+            "try:\n"
+            "    import tqdm.auto as _ta\n"
+            "except ImportError:\n"
+            "    _ta = None\n"
+            "\n"
+            "class _P(tqdm.tqdm):\n"
+            "    def __init__(self, *a, **k):\n"
+            "        k['disable'] = False\n"
+            "        super().__init__(*a, **k)\n"
+            "\n"
+            "tqdm.tqdm = _P\n"
+            "if _ta:\n"
+            "    _ta.tqdm = _P\n"
+            "try:\n"
+            "    import huggingface_hub.utils._tqdm as _h\n"
+            "    _h.tqdm = _P\n"
+            "except Exception:\n"
+            "    pass\n"
+            "\n"
+            "from faster_whisper import WhisperModel\n"
+            f"WhisperModel('{_WIN_MODEL}', device='cpu', compute_type='int8')\n"
+            "print('  Model ready.', flush=True)\n",
+            encoding="utf-8",
         )
-    subprocess.run([str(VENV_PY), "-c", script], check=True, env=env)
+        try:
+            subprocess.run([str(VENV_PY), str(dl)], check=True, env=env)
+        finally:
+            dl.unlink(missing_ok=True)
+
     ok("Model downloaded and warmed up")
 
 

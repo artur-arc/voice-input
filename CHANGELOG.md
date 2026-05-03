@@ -1,6 +1,10 @@
 # Changelog
 
 All notable changes to voice-input.
+## v1.0.9 — 2026-05-03
+### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`cc57162`](https://github.com/artur-arc/voice-input/commit/cc571620ed92ec6306cd8b5a6836800496033ef0) Release v1.0.9
+
 ## v1.0.8 — 2026-05-03
 ### 2026-05-03
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`8d0a5e0`](https://github.com/artur-arc/voice-input/commit/8d0a5e06c4b4dd458ded612511bc445e129db673) Release v1.0.8
