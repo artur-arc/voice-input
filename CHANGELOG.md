@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
-- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`5bb317d`](https://github.com/artur-arc/voice-input/commit/5bb317d82c631578af9bc6ccaaeee014a8a5ac7e) Enable verbose mode for CT2 library
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`520b7d7`](https://github.com/artur-arc/voice-input/commit/520b7d73a8d6d5495c3ebb40252c10d327e40666) Enable verbose mode for CT2 library
 
 ## v1.0.39 — 2026-05-03
 ### 2026-05-03
