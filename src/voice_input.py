@@ -7,16 +7,16 @@ import time
 from pathlib import Path
 
 import numpy as np
-import pyperclip
 import sounddevice as sd
-from faster_whisper import WhisperModel
+import mlx_whisper
 from pynput import keyboard
-from pynput.keyboard import Controller, Key
+from pynput.keyboard import Key
 
 from cleanup import TranscriptCleaner
+from paste_util import has_accessibility, paste_text
 
 SAMPLE_RATE = 16000
-MODEL_SIZE = "medium"
+MODEL_REPO = "mlx-community/whisper-large-v3-mlx"
 MIN_RECORD_SEC = 0.3
 RECORD_KEY = Key.cmd_r
 MODE_KEY = Key.alt_r
@@ -121,20 +121,24 @@ def pick_input_device() -> tuple[int | None, str]:
     default = sd.query_devices(kind="input")
     return None, default["name"]
 
+
 load_config()
 
 input_device, input_name = pick_input_device()
 print(f"Mic: {input_name}")
-print(f"Loading {MODEL_SIZE} model...")
-model = WhisperModel(MODEL_SIZE, device="cpu", compute_type="int8")
+print(f"Loading {MODEL_REPO}...")
+mlx_whisper.transcribe(np.zeros(SAMPLE_RATE, dtype=np.float32), path_or_hf_repo=MODEL_REPO, language="en", verbose=False)
 
 m = current_mode()
-print(f"Ready. Mode: {m['label']} | cleanup: {cleanup_enabled} | Right Cmd = record | Right Option = cycle mode\n")
-notify("Voice Input", f"Ready · {m['label']}")
+ax_ok = has_accessibility()
+print(f"Ready. Mode: {m['label']} | cleanup: {cleanup_enabled} | accessibility: {'✓' if ax_ok else '✗ (paste disabled)'}")
+if not ax_ok:
+    print("  → Add to Accessibility: System Settings > Privacy & Security > Accessibility")
+    print(f"  → Binary: {Path('/opt/homebrew/opt/python@3.14/bin/python3.14').resolve()}")
+notify("Voice Input", f"Ready · {m['label']}" + ("" if ax_ok else " · no paste"))
 
 threading.Thread(target=watch_config, daemon=True).start()
 
-kb = Controller()
 state_lock = threading.Lock()
 recording = False
 audio_chunks: list = []
@@ -208,15 +212,15 @@ def _transcribe_and_paste(audio: np.ndarray) -> None:
             "Привет, давайте обсудим задачу." if m["language"] == "ru" else
             "Let's discuss the task."
         )
-        segments, _ = model.transcribe(
+        result = mlx_whisper.transcribe(
             audio,
+            path_or_hf_repo=MODEL_REPO,
             task=m["task"],
             language=m["language"],
-            beam_size=5,
-            vad_filter=True,
             initial_prompt=initial_prompt,
+            verbose=False,
         )
-        text = "".join(s.text for s in segments).strip()
+        text = result["text"].strip()
 
         if not text:
             print(f"[{time.time() - t0:.1f}s] (no speech detected)")
@@ -233,11 +237,9 @@ def _transcribe_and_paste(audio: np.ndarray) -> None:
         tag = f"{m['label']}+clean" if active_cleaner is not None else m['label']
         print(f"[{elapsed:.1f}s] [{tag}] {text}")
 
-        pyperclip.copy(text)
-        time.sleep(0.1)
-        with kb.pressed(Key.cmd):
-            kb.press("v")
-            kb.release("v")
+        pasted = paste_text(text)
+        if not pasted:
+            print("  (text in clipboard — grant Accessibility to enable auto-paste)")
         play("Pop")
     except Exception as e:
         print(f"Error: {e}")
