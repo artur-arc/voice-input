@@ -1,6 +1,14 @@
 # Changelog
 
 All notable changes to voice-input.
+## [unreleased]
+### 2026-05-03
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`51ca7cd`](https://github.com/artur-arc/voice-input/commit/51ca7cde4a952f2e3933cfdc35908f377b4447f9) Replace package check with import-based probe
+
+## v1.0.11 — 2026-05-03
+### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`69bc831`](https://github.com/artur-arc/voice-input/commit/69bc831aa14ca5c7a5732f808c5ff88948ff1ef7) Release v1.0.11
+
 ## v1.0.10 — 2026-05-03
 ### 2026-05-03
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`beacae9`](https://github.com/artur-arc/voice-input/commit/beacae949a2d294cf8be591fa933e5f987492908) Release v1.0.10

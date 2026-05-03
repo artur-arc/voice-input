@@ -5,7 +5,6 @@ Called by install.command (macOS / Windows Git Bash) after Python is confirmed a
 """
 from __future__ import annotations
 
-import hashlib
 import os
 import shutil
 import subprocess
@@ -59,10 +58,13 @@ def create_venv() -> None:
 
 
 def install_packages() -> None:
-    req_hash = hashlib.md5(REQUIREMENTS.read_bytes()).hexdigest()
-    stamp = REPO_DIR / ".venv" / ".req_hash"
-    if stamp.exists() and stamp.read_text().strip() == req_hash:
-        ok("Packages already up to date")
+    probe = (
+        "import ctranslate2, faster_whisper, sounddevice, pynput, pystray, PIL"
+        if IS_WINDOWS else
+        "import mlx_whisper, sounddevice, pynput, rumps"
+    )
+    if subprocess.run([str(VENV_PY), "-c", probe], capture_output=True).returncode == 0:
+        ok("Packages already installed")
         return
     subprocess.run(
         [str(VENV_PY), "-m", "pip", "install", "--quiet", "--upgrade", "pip"],
@@ -73,7 +75,6 @@ def install_packages() -> None:
         [str(VENV_PY), "-m", "pip", "install", "--progress-bar", "on", "-r", str(REQUIREMENTS)],
         check=True,
     )
-    stamp.write_text(req_hash, encoding="utf-8")
     ok("All packages installed")
 
 
