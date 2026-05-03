@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`301b136`](https://github.com/artur-arc/voice-input/commit/301b13610d7a33004c07a6fabc29f60a753ddda4) Update feedback and transcription handling
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`d9baed0`](https://github.com/artur-arc/voice-input/commit/d9baed0a74c88e6c0a3ee8bb1a4432f970902628) Update feedback and transcription handling
 
 ## v1.0.28 — 2026-05-03
 ### 2026-05-03
