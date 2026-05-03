@@ -4,6 +4,9 @@ from __future__ import annotations
 import contextlib
 import io
 import logging
+import queue
+import struct
+import subprocess
 import sys
 import threading
 from abc import ABC, abstractmethod
@@ -134,11 +137,12 @@ class _MacTranscriber(Transcriber):
         return result["text"].strip() or None
 
 
-_INT8_TIMEOUT = 30    # seconds — AVX2 CPU loads small model in <20s; broken AVX2 hangs indefinitely
-_FLOAT32_TIMEOUT = 300  # seconds — fallback for CPUs without AVX2; slower but universal
+_INT8_TIMEOUT = 60    # seconds per compute_type probe in worker subprocess
+_FLOAT32_TIMEOUT = 300
 
 # Cache file: stores the compute_type that worked last time so future starts skip detection
 _COMPUTE_TYPE_CACHE = Path(__file__).parent.parent / ".ct2_compute_type"
+_WORKER_SCRIPT = Path(__file__).parent / "transcription_worker.py"
 
 
 def _read_cached_compute_type() -> str | None:
@@ -157,14 +161,19 @@ def _save_cached_compute_type(ct: str) -> None:
 
 
 class _WindowsTranscriber(Transcriber):
-    """faster-whisper backend — Windows/CPU (int8 quantization)."""
+    """faster-whisper backend — runs ctranslate2 in an isolated subprocess.
+
+    ctranslate2 can crash with STATUS_ACCESS_VIOLATION (0xC0000005) on some CPUs,
+    killing the whole Python process. Running it in a subprocess confines any native
+    crash to the child, keeping the tray process alive.
+    """
 
     def __init__(self, model_repo: str = MODEL_REPO) -> None:
         self._model_name = _detect_win_model()
-        self._model: WhisperModel | None = None
+        self._proc: subprocess.Popen[bytes] | None = None
         self._ready = threading.Event()
         self._load_error: str | None = None
-        self._transcribe_lock = threading.Lock()
+        self._io_lock = threading.Lock()
         logger.info("Windows model selected: %s", self._model_name)
 
     @property
@@ -174,17 +183,9 @@ class _WindowsTranscriber(Transcriber):
     def is_ready(self) -> bool:
         return self._ready.is_set()
 
-    def warm_up(self) -> None:
-        import os
-        # OMP_NUM_THREADS=1 prevents OpenMP thread-pool collisions (Intel MKL vs LLVM OMP on Windows).
-        # CT2_FORCE_CPU_ISA=GENERIC prevents ctranslate2 from using AVX2/AVX instructions that
-        # cause a native segfault on CPUs with partial or broken AVX2 support. The crash kills
-        # the entire Python process — it cannot be caught by a timeout or try/except.
-        # Must be set before the first ctranslate2 import in this process.
-        os.environ.setdefault("OMP_NUM_THREADS", "1")
-        os.environ.setdefault("CT2_FORCE_CPU_ISA", "GENERIC")
-        from faster_whisper import WhisperModel  # type: ignore[import]  # lazy — Windows only package
+    # ── Lifecycle ─────────────────────────────────────────────────────────────
 
+    def warm_up(self) -> None:
         try:
             cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
             model_dir = cache_dir / f"models--Systran--faster-whisper-{self._model_name}"
@@ -197,60 +198,38 @@ class _WindowsTranscriber(Transcriber):
                 logger.error(self._load_error)
                 return
 
-            # Use saved compute_type from last successful load — skips slow detection.
             saved_ct = _read_cached_compute_type()
             if saved_ct:
                 compute_types = [saved_ct]
                 logger.info("Using saved compute_type=%s (from previous run)", saved_ct)
             else:
                 compute_types = ["int8", "float32"]
-                logger.info("First run — will detect best compute_type")
+                logger.info("First run — will probe compute_types in subprocess")
 
             timeouts = {"int8": _INT8_TIMEOUT, "float32": _FLOAT32_TIMEOUT}
             for compute_type in compute_types:
                 timeout = timeouts.get(compute_type, _FLOAT32_TIMEOUT)
-                load_error: list[str] = []
-                loaded_model: list[Any] = []
-
-                logger.info("Trying compute_type=%s (timeout=%ds)...", compute_type, timeout)
-
-                def _load(ct: str = compute_type) -> None:
-                    try:
-                        m = WhisperModel(self._model_name, device="cpu", compute_type=ct)
-                        loaded_model.append(m)
-                    except Exception as exc:
-                        load_error.append(str(exc))
-                        logger.exception("Model load failed (compute_type=%s): %s", ct, exc)
-
-                t = threading.Thread(target=_load, daemon=True)
-                t.start()
-                t.join(timeout=timeout)
-
-                if t.is_alive():
-                    logger.warning("compute_type=%s timed out after %ds — trying next", compute_type, timeout)
-                    if saved_ct:
-                        _COMPUTE_TYPE_CACHE.unlink(missing_ok=True)
-                        logger.warning("Cleared saved compute_type — will re-detect on next start")
-                    continue
-
-                if load_error:
-                    logger.warning("compute_type=%s failed — trying next", compute_type)
-                    if saved_ct:
-                        _COMPUTE_TYPE_CACHE.unlink(missing_ok=True)
-                    continue
-
-                if loaded_model:
-                    self._model = loaded_model[0]
-                    logger.info("Model loaded: %s (compute_type=%s)", self._model_name, compute_type)
+                logger.info("Probing compute_type=%s in subprocess (timeout=%ds)...",
+                            compute_type, timeout)
+                proc = self._launch_worker(compute_type, timeout)
+                if proc is not None:
+                    self._proc = proc
+                    logger.info("Worker ready: model=%s compute_type=%s",
+                                self._model_name, compute_type)
                     if not saved_ct:
                         _save_cached_compute_type(compute_type)
-                        logger.info("Saved compute_type=%s — next start will be faster", compute_type)
+                        logger.info("Saved compute_type=%s for next run", compute_type)
                     break
+                if saved_ct:
+                    _COMPUTE_TYPE_CACHE.unlink(missing_ok=True)
+                    logger.warning("Cleared cached compute_type — will re-probe next run")
+                    saved_ct = None
+                    compute_types = ["int8", "float32"]
 
-            if self._model is None and self._load_error is None:
+            if self._proc is None and not self._load_error:
                 self._load_error = (
-                    "Model failed to load with both int8 and float32. "
-                    "Check tray_windows.log for details."
+                    "Model failed to load with int8 and float32 — "
+                    "check tray_windows.log for ctranslate2 errors."
                 )
                 logger.error(self._load_error)
 
@@ -260,42 +239,127 @@ class _WindowsTranscriber(Transcriber):
         finally:
             self._ready.set()
 
+    def _launch_worker(
+        self, compute_type: str, timeout: int
+    ) -> "subprocess.Popen[bytes] | None":
+        """Start a worker subprocess and wait for it to signal READY.
+
+        If the worker crashes (native segfault, OOM, etc.) it exits with a non-zero
+        code; we capture its stderr and log it for diagnosis, then return None.
+        """
+        try:
+            proc = subprocess.Popen(
+                [sys.executable, str(_WORKER_SCRIPT)],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        except Exception as exc:
+            logger.error("Failed to start worker process: %s", exc)
+            return None
+
+        try:
+            self._ws(proc, self._model_name)
+            self._ws(proc, compute_type)
+            response = self._rs(proc, timeout=timeout)
+        except Exception as exc:
+            logger.error("Worker communication error (ct=%s): %s", compute_type, exc)
+            self._terminate(proc)
+            return None
+
+        if response == "READY":
+            return proc
+
+        # Worker reported an error or crashed — log its stderr for diagnosis
+        stderr_out = ""
+        try:
+            proc.wait(timeout=5)
+            raw = proc.stderr.read(4096) if proc.stderr else b""
+            stderr_out = raw.decode("utf-8", errors="replace").strip()
+        except Exception:
+            pass
+
+        if response.startswith("ERROR:"):
+            logger.error("Worker init error (ct=%s): %s", compute_type, response[6:])
+        else:
+            logger.error("Worker init unexpected response (ct=%s): %r", compute_type, response)
+        if stderr_out:
+            logger.error("Worker stderr (ct=%s):\n%s", compute_type, stderr_out)
+        if proc.returncode is not None and proc.returncode != 0:
+            logger.error("Worker exit code: %d (0x%08X)", proc.returncode,
+                         proc.returncode & 0xFFFFFFFF)
+
+        self._terminate(proc)
+        return None
+
+    # ── Transcription ─────────────────────────────────────────────────────────
+
     def transcribe(self, audio: np.ndarray, mode: Mode) -> str | None:
         if len(audio) < SAMPLE_RATE * MIN_RECORD_SEC:
             return None
         if not self._ready.is_set():
-            logger.info("Waiting for model to load...")
-            self._ready.wait()  # wait indefinitely — audio must not be lost on slow machines
-            logger.info("Model ready — processing audio")
-        if self._model is None:
-            logger.error("Model unavailable (load error: %s)", self._load_error)
+            logger.info("Waiting for worker to load...")
+            self._ready.wait()
+        if self._proc is None:
+            logger.error("Worker unavailable: %s", self._load_error)
             return None
-        kwargs: dict[str, Any] = {
-            "language": mode.language,
-            "initial_prompt": self._initial_prompt(mode.language),
-        }
-        if mode.task == "translate":
-            kwargs["task"] = "translate"
-        with self._transcribe_lock:
-            result: list[Any] = []
-            exc_box: list[str] = []
+        if self._proc.poll() is not None:
+            logger.error("Worker process has exited unexpectedly (rc=%d)", self._proc.returncode)
+            return None
 
-            def _run() -> None:
-                try:
-                    result.append(self._model.transcribe(audio, **kwargs))  # type: ignore[union-attr]
-                except Exception as e:
-                    exc_box.append(str(e))
+        with self._io_lock:
+            try:
+                assert self._proc.stdin and self._proc.stdout
+                self._proc.stdin.write(struct.pack(">I", len(audio)))
+                self._proc.stdin.write(audio.astype(np.float32).tobytes())
+                self._proc.stdin.flush()
+                self._ws(self._proc, mode.language)
+                self._ws(self._proc, mode.task)
+                self._ws(self._proc, self._initial_prompt(mode.language))
+                return self._rs(self._proc, timeout=60) or None
+            except Exception as exc:
+                logger.error("Transcription pipe error: %s", exc)
+                return None
 
-            t = threading.Thread(target=_run, daemon=True)
-            t.start()
-            t.join(timeout=60)
-            if t.is_alive():
-                logger.error("Transcription timed out after 60s — model may be stuck")
-                return None
-            if exc_box:
-                logger.error("Transcription error: %s", exc_box[0])
-                return None
-            if not result:
-                return None
-            segments, _ = result[0]
-        return " ".join(s.text for s in segments).strip() or None
+    # ── IPC helpers ───────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _ws(proc: "subprocess.Popen[bytes]", s: str) -> None:
+        b = s.encode("utf-8")
+        assert proc.stdin
+        proc.stdin.write(struct.pack(">H", len(b)) + b)
+        proc.stdin.flush()
+
+    @staticmethod
+    def _rs(proc: "subprocess.Popen[bytes]", timeout: int) -> str:
+        """Read a length-prefixed UTF-8 string from the worker stdout with a timeout."""
+        result_q: queue.Queue[str | Exception] = queue.Queue()
+
+        def _read() -> None:
+            try:
+                assert proc.stdout
+                header = proc.stdout.read(2)
+                if len(header) < 2:
+                    result_q.put("")
+                    return
+                (n,) = struct.unpack(">H", header)
+                result_q.put(proc.stdout.read(n).decode("utf-8"))
+            except Exception as exc:
+                result_q.put(exc)
+
+        threading.Thread(target=_read, daemon=True).start()
+        try:
+            val = result_q.get(timeout=timeout)
+            if isinstance(val, Exception):
+                raise val
+            return val
+        except queue.Empty:
+            logger.warning("Worker response timed out after %ds", timeout)
+            return ""
+
+    @staticmethod
+    def _terminate(proc: "subprocess.Popen[bytes]") -> None:
+        try:
+            proc.terminate()
+        except Exception:
+            pass
