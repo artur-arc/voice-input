@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
-- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`07d6230`](https://github.com/artur-arc/voice-input/commit/07d623012d5c16723f16bb7d23c4327e775a2c27) Update clipboard handling for Windows
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`beebb11`](https://github.com/artur-arc/voice-input/commit/beebb1126814239d2c371f458d1af878b030b4bb) Update clipboard handling for Windows
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`2595f2f`](https://github.com/artur-arc/voice-input/commit/2595f2fe4d71f353e7962afb355e4c96f3a1d7b7) Cache working compute_type, add OMP_NUM_THREADS=1
 
 ## v1.0.25 — 2026-05-03
