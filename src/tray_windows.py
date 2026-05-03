@@ -55,13 +55,29 @@ def _parse_version(v: str) -> tuple[int, ...]:
 
 
 def _list_input_devices() -> list[tuple[int, str]]:
+    """Return real input devices: deduplicated by name, no BT hands-free, no virtual devices."""
     try:
         import sounddevice as sd
-        return [
-            (i, str(d["name"]))
-            for i, d in enumerate(sd.query_devices())
-            if d["max_input_channels"] > 0
-        ]
+        seen: set[str] = set()
+        result: list[tuple[int, str]] = []
+        for i, d in enumerate(sd.query_devices()):
+            if d["max_input_channels"] <= 0:
+                continue
+            name: str = d["name"].strip()
+            if not name:
+                continue
+            # Skip Windows Bluetooth HFP (8 kHz hands-free — useless for transcription)
+            if "bthhfenum.sys" in name.lower():
+                continue
+            # Skip Windows virtual/system devices
+            if name in ("Переназначение звуковых устр. - Input", "Первичный драйвер записи звука",
+                        "Primary Sound Capture Driver", "Stereo Mix"):
+                continue
+            if name in seen:
+                continue
+            seen.add(name)
+            result.append((i, name))
+        return result
     except Exception:
         logger.exception("Failed to query audio devices")
         return []

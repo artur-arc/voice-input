@@ -97,8 +97,10 @@ class _WindowsTranscriber(Transcriber):
     """faster-whisper backend — Windows/CPU (int8 quantization)."""
 
     def __init__(self, model_repo: str = MODEL_REPO) -> None:
+        import threading
         self._model_name = _WIN_MODEL  # mlx model path is not valid on Windows
         self._model: WhisperModel | None = None
+        self._ready = threading.Event()
 
     @property
     def model_repo(self) -> str:
@@ -108,17 +110,19 @@ class _WindowsTranscriber(Transcriber):
         from faster_whisper import WhisperModel  # lazy — Windows only package
         self._model = WhisperModel(self._model_name, device="cpu", compute_type="int8")
         logger.info("Model loaded: %s", self._model_name)
+        self._ready.set()
 
     def transcribe(self, audio: np.ndarray, mode: Mode) -> str | None:
         if len(audio) < SAMPLE_RATE * MIN_RECORD_SEC:
             return None
-        if self._model is None:
-            raise RuntimeError("warm_up() must be called before transcribe()")
+        if not self._ready.is_set():
+            logger.info("Waiting for model to load...")
+            self._ready.wait()
         kwargs: dict[str, Any] = {
             "language": mode.language,
             "initial_prompt": self._initial_prompt(mode.language),
         }
         if mode.task == "translate":
             kwargs["task"] = "translate"
-        segments, _ = self._model.transcribe(audio, **kwargs)
+        segments, _ = self._model.transcribe(audio, **kwargs)  # type: ignore[union-attr]
         return " ".join(s.text for s in segments).strip() or None
