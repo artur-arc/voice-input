@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`f467d3e`](https://github.com/artur-arc/voice-input/commit/f467d3e54bfb34c9c183f16f44c000fc160def60) Remove model warm-up step
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`f3d46e3`](https://github.com/artur-arc/voice-input/commit/f3d46e3c0901d722f4852c55d9a81cc1033147cc) Remove model warm-up step
 
 ## v1.0.14 — 2026-05-03
 ### 2026-05-03
