@@ -107,10 +107,7 @@ class _WindowsTranscriber(Transcriber):
     def warm_up(self) -> None:
         from faster_whisper import WhisperModel  # lazy — Windows only package
         self._model = WhisperModel(self._model_name, device="cpu", compute_type="int8")
-        dummy = np.zeros(SAMPLE_RATE, dtype=np.float32)
-        segments, _ = self._model.transcribe(dummy, language="en")
-        list(segments)  # consume generator to force ONNX compilation
-        logger.info("Model warm-up complete: %s", self._model_name)
+        logger.info("Model loaded: %s", self._model_name)
 
     def transcribe(self, audio: np.ndarray, mode: Mode) -> str | None:
         if len(audio) < SAMPLE_RATE * MIN_RECORD_SEC:

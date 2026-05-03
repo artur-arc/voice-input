@@ -3,6 +3,11 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`f467d3e`](https://github.com/artur-arc/voice-input/commit/f467d3e54bfb34c9c183f16f44c000fc160def60) Remove model warm-up step
+
+## v1.0.14 — 2026-05-03
+### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`39238c0`](https://github.com/artur-arc/voice-input/commit/39238c0aefc2dd21c829c01d1e0b9deeb8745419) Release v1.0.14
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`8aa2678`](https://github.com/artur-arc/voice-input/commit/8aa2678726253a68d0a5ac17d99d36ff9fc78a82) Redirect voice input output to log file
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`bf5abe0`](https://github.com/artur-arc/voice-input/commit/bf5abe07ab2ceb3d4a0982e34a63b760a52830c3) Ensure logging works on Windows
 
