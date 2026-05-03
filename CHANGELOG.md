@@ -3,6 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`3eb2fdb`](https://github.com/artur-arc/voice-input/commit/3eb2fdb50ff1f30a4a3170235e0a9be76a9fb6ed) Probe float16 first; remove incorrect size-based stale check
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`dc61da9`](https://github.com/artur-arc/voice-input/commit/dc61da922b4452d08433a366988aac261f9b67b6) Show 'waiting for model' notification only once
 
 ## v1.0.37 — 2026-05-03
