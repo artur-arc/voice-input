@@ -3,6 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`d254a5a`](https://github.com/artur-arc/voice-input/commit/d254a5adfa2bcd5637ffa9c371dc3059e5b185cf) Fallback to float32 if int8 times out or fails
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`dee4626`](https://github.com/artur-arc/voice-input/commit/dee46269417e431319c7404e4d78bc76507f1d70) Type hint plyer import for Windows-only
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`7f25fdc`](https://github.com/artur-arc/voice-input/commit/7f25fdc7c0b5b2a03002c311f9b424db236b583b) Prevent multiple simultaneous instances via Windows mutex
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`b7003af`](https://github.com/artur-arc/voice-input/commit/b7003af84a04a5cb18f724797f54bf98127faa8b) Fail fast if model not cached, add 300s load timeout
