@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`68fe52f`](https://github.com/artur-arc/voice-input/commit/68fe52fcc8bbfd56825692c1db9d4324c3bee5cb) Detect model based on RAM
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`0eabed8`](https://github.com/artur-arc/voice-input/commit/0eabed8f2f9e577600cffd51fc6fee7ca97f5707) Detect model based on RAM
 
 ## v1.0.19 — 2026-05-03
 ### 2026-05-03
