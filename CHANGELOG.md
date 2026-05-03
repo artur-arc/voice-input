@@ -1,8 +1,9 @@
 # Changelog
 
 All notable changes to voice-input.
-## [unreleased]
+## v1.0.36 — 2026-05-03
 ### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`cf1eda7`](https://github.com/artur-arc/voice-input/commit/cf1eda724b2a13453722b395b6384e572fe7cad4) Release v1.0.36
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`ad915d5`](https://github.com/artur-arc/voice-input/commit/ad915d5ed5640908014d1a10c15245501d899aa3) Increase int8 probe timeout from 60s to 300s
 
 ## v1.0.35 — 2026-05-03

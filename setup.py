@@ -150,6 +150,11 @@ def download_model() -> None:
         )
         subprocess.run([str(VENV_PY), "-c", script], check=True, env=env)
     else:
+        # Kill any running tray instance before touching model files to avoid
+        # Windows file locks that silently prevent shutil.rmtree from deleting.
+        subprocess.run(["taskkill", "/f", "/im", "pythonw.exe"], capture_output=True)
+        import time as _time; _time.sleep(1)
+
         target = _detect_win_model()
         cache_dir = _hf_cache_dir()
         cache_dir.mkdir(parents=True, exist_ok=True)

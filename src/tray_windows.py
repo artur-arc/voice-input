@@ -312,12 +312,16 @@ class VoiceInputTray:
 
     def _warm_up(self) -> None:
         try:
+            self._icon.title = "Voice Input — loading model…"
             self._transcriber.warm_up()
             if self._transcriber.is_ready() and getattr(self._transcriber, "_load_error", None) is None:
+                mode = self._config.current_mode()
+                self._icon.title = f"Voice Input — {mode.label}"
                 self._feedback.play("Pop")
                 self._feedback.notify("Voice Input", "Model ready — voice input active")
                 logger.info("Model ready — tray notified user")
             else:
+                self._icon.title = "Voice Input — model failed"
                 err = getattr(self._transcriber, "_load_error", "unknown error")
                 self._feedback.notify("Voice Input", f"Model failed to load: {err}")
                 logger.error("Model not ready after warm_up: %s", err)
@@ -341,8 +345,17 @@ class VoiceInputTray:
                 if self._recording:
                     return
                 self._recording = True
-            self._recorder.start()
-            self._feedback.play("Pop")
+            try:
+                self._recorder.start(preferred_name=self._config.input_device())
+                self._feedback.play("Pop")
+            except RuntimeError as exc:
+                logger.error("Microphone start failed: %s", exc)
+                with self._record_lock:
+                    self._recording = False
+                self._feedback.notify(
+                    "Voice Input",
+                    "Microphone error — check permissions or device",
+                )
 
     def _on_release(self, key: Any) -> None:
         logger.info("Key released: %r", key)
