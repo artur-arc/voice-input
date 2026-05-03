@@ -30,7 +30,7 @@ git push origin "$TAG"
 
 # ── Build Windows zip asset ───────────────────────────────────────────────────
 ZIP_NAME="voice-input-windows-$NEXT.zip"
-zip -r "$ZIP_NAME" src/ assets/ requirements-windows.txt VERSION voice-input-config.json setup.py \
+zip -r "$ZIP_NAME" src/ assets/ requirements-windows.txt VERSION voice-input-config.json setup.py install.bat \
   -x "src/__pycache__/*" -x "src/*.pyc" -x "*/.DS_Store"
 
 # ── GitHub release notes ──────────────────────────────────────────────────────
@@ -38,12 +38,9 @@ CHANGELOG_SECTION=$(git-cliff --config cliff.toml --latest --strip all 2>/dev/nu
 
 NOTES="## Installation
 
-**Windows** — download \`voice-input-windows-$NEXT.zip\`, extract anywhere, run \`install.bat\`
+**Windows** — download \`voice-input-windows-$NEXT.zip\`, extract anywhere, double-click \`install.bat\`
 
-**macOS** — open Terminal and run:
-\`\`\`
-curl -fsSL https://raw.githubusercontent.com/artur-arc/voice-input/main/setup.sh | bash
-\`\`\`
+**macOS** — download \`install.command\`, double-click in Finder
 
 ## Changes
 

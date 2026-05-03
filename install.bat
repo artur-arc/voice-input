@@ -69,8 +69,15 @@ if not defined PYTHON (
     goto :error
 )
 
-:: ── Download Voice Input ──────────────────────────────────────────────────────
+:: ── Download Voice Input (skip if already extracted from zip) ────────────────
 :download
+if exist "%~dp0setup.py" (
+    echo.
+    echo  Found setup.py alongside install.bat — skipping download.
+    set "INSTALL_DIR=%~dp0"
+    goto :run_setup
+)
+
 echo.
 echo Downloading Voice Input...
 if exist "%INSTALL_DIR%" rmdir /s /q "%INSTALL_DIR%"
@@ -102,6 +109,7 @@ if %PS_ERR% neq 0 (
 )
 
 :: ── Run setup.py ──────────────────────────────────────────────────────────────
+:run_setup
 echo.
 echo Setting up...
 cd /d "%INSTALL_DIR%"
