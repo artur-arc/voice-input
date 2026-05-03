@@ -3,6 +3,11 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`1ffdf43`](https://github.com/artur-arc/voice-input/commit/1ffdf434814ef1af2cac94996b011223e6871188) Remove redundant tray instance killing in setup.py
+
+## v1.0.40 — 2026-05-03
+### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`eedcdb9`](https://github.com/artur-arc/voice-input/commit/eedcdb9bc4c727fe66eb6d548ae44afca7b637cf) Release v1.0.40
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`520b7d7`](https://github.com/artur-arc/voice-input/commit/520b7d73a8d6d5495c3ebb40252c10d327e40666) Enable verbose mode for CT2 library
 
 ## v1.0.39 — 2026-05-03
