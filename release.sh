@@ -29,14 +29,28 @@ git push origin HEAD
 git push origin "$TAG"
 
 # ── Build Windows zip asset ───────────────────────────────────────────────────
-ZIP_NAME="voice-input-$NEXT-windows.zip"
+ZIP_NAME="voice-input-windows-$NEXT.zip"
 zip -r "$ZIP_NAME" src/ assets/ requirements-windows.txt VERSION voice-input-config.json setup.py \
   -x "src/__pycache__/*" -x "src/*.pyc" -x "*/.DS_Store"
 
-# ── GitHub release with notes from this version's CHANGELOG section ───────────
-NOTES=$(git-cliff --config cliff.toml --unreleased --strip all --tag "$TAG" 2>/dev/null || echo "Release $TAG")
+# ── GitHub release notes ──────────────────────────────────────────────────────
+CHANGELOG_SECTION=$(git-cliff --config cliff.toml --latest --strip all 2>/dev/null || echo "")
+
+NOTES="## Installation
+
+**Windows** — download \`voice-input-windows-$NEXT.zip\`, extract anywhere, run \`install.bat\`
+
+**macOS** — open Terminal and run:
+\`\`\`
+curl -fsSL https://raw.githubusercontent.com/artur-arc/voice-input/main/setup.sh | bash
+\`\`\`
+
+## Changes
+
+$CHANGELOG_SECTION"
+
 gh release create "$TAG" \
-  --title "Release $TAG" \
+  --title "Voice Input $TAG" \
   --notes "$NOTES" \
   "$ZIP_NAME"
 

@@ -1,79 +1,77 @@
 @echo off
 setlocal enabledelayedexpansion
-chcp 65001 >nul 2>&1
 
 set "INSTALL_DIR=%USERPROFILE%\voice-input"
 set "GITHUB_REPO=artur-arc/voice-input"
 
 cls
 echo.
-echo  ================================================
-echo       Voice Input  --  Windows Installer
-echo  ================================================
+echo  Voice Input - Windows Installer
+echo  ================================
 echo.
-echo   This will take a few minutes. Do not close this window.
+echo  This will take a few minutes. Do not close this window.
 echo.
 
 :: ── Python 3.11+ (try py launcher, python3, python) ──────────────────────────
-echo -- Python check
+echo Checking Python...
 set "PYTHON="
-for %%P in (py python3 python) do (
-    if not defined PYTHON (
-        %%P --version >nul 2>&1
-        if not errorlevel 1 set "PYTHON=%%P"
-    )
-)
-if not defined PYTHON (
-    echo.
-    echo   Python not found.
-    echo   Please install Python 3.11+ from:
-    echo     https://www.python.org/downloads/
-    echo   Check "Add Python to PATH" during installation, then re-run this file.
-    goto :error
-)
-for /f "tokens=2" %%v in ('!PYTHON! --version 2^>^&1') do set "PY_VER=%%v"
+
+py --version >nul 2>&1
+if not errorlevel 1 ( set "PYTHON=py" & goto :python_found )
+python3 --version >nul 2>&1
+if not errorlevel 1 ( set "PYTHON=python3" & goto :python_found )
+python --version >nul 2>&1
+if not errorlevel 1 ( set "PYTHON=python" & goto :python_found )
+
+echo.
+echo  Python not found.
+echo  Install Python 3.11+ from: https://www.python.org/downloads/
+echo  Check "Add Python to PATH" during installation, then re-run this file.
+goto :error
+
+:python_found
+for /f "tokens=2" %%V in ('!PYTHON! --version 2^>^&1') do set "PY_VER=%%V"
 for /f "tokens=1 delims=." %%M in ("!PY_VER!") do set "PY_MAJOR=%%M"
 for /f "tokens=2 delims=." %%m in ("!PY_VER!") do set "PY_MINOR=%%m"
-if !PY_MAJOR! lss 3 (
-    echo   Python 3.11+ required. Found: !PY_VER!
-    goto :error
-)
-if !PY_MINOR! lss 11 (
-    echo   Python 3.11+ required. Found: !PY_VER!
-    goto :error
-)
-echo   OK  Python !PY_VER! (!PYTHON!)
+if !PY_MAJOR! lss 3 ( echo  Python 3.11+ required. Found: !PY_VER! & goto :error )
+if !PY_MINOR! lss 11 ( echo  Python 3.11+ required. Found: !PY_VER! & goto :error )
+echo  OK  Python !PY_VER!
 
-:: ── Download latest release zip via PowerShell (no git required) ─────────────
+:: ── Download latest release zip via PowerShell ───────────────────────────────
 echo.
-echo -- Downloading Voice Input
-if exist "%INSTALL_DIR%" (
-    echo   Removing previous installation...
-    rmdir /s /q "%INSTALL_DIR%"
-)
+echo Downloading Voice Input...
+if exist "%INSTALL_DIR%" rmdir /s /q "%INSTALL_DIR%"
 mkdir "%INSTALL_DIR%"
 
-powershell -NoProfile -Command ^
-    "$ErrorActionPreference = 'Stop';" ^
-    "try {" ^
-    "  $api = 'https://api.github.com/repos/%GITHUB_REPO%/releases/latest';" ^
-    "  $rel = Invoke-RestMethod -Uri $api -Headers @{'User-Agent'='voice-input-installer'};" ^
-    "  $asset = $rel.assets | Where-Object { $_.name -like '*windows*.zip' } | Select-Object -First 1;" ^
-    "  if (-not $asset) { throw 'No Windows zip asset found in release ' + $rel.tag_name };" ^
-    "  Write-Host ('  Downloading ' + $asset.name + '...');" ^
-    "  Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $env:TEMP\vi-update.zip -UseBasicParsing;" ^
-    "  Write-Host '  Extracting...';" ^
-    "  Expand-Archive -Path $env:TEMP\vi-update.zip -DestinationPath '%INSTALL_DIR%' -Force;" ^
-    "  Remove-Item $env:TEMP\vi-update.zip -Force;" ^
-    "  Write-Host '  OK  Downloaded';" ^
-    "} catch { Write-Host ('  ERROR: ' + $_); exit 1 }"
-if errorlevel 1 (
+:: Write PS1 script line by line (avoids ^ continuation quoting issues)
+set "PS1=%TEMP%\vi-install.ps1"
+set "VI_DEST=%INSTALL_DIR%"
+
+>  "%PS1%" echo $ErrorActionPreference = 'Stop'
+>> "%PS1%" echo $dest = $env:VI_DEST
+>> "%PS1%" echo $rel = Invoke-RestMethod 'https://api.github.com/repos/%GITHUB_REPO%/releases/latest' -Headers @{'User-Agent'='voice-input-installer'}
+>> "%PS1%" echo $asset = $rel.assets ^| Where-Object { $_.name -like '*windows*.zip' } ^| Select-Object -First 1
+>> "%PS1%" echo if (-not $asset) { Write-Host 'ERROR: No zip asset in this release'; exit 1 }
+>> "%PS1%" echo $n = $asset.name
+>> "%PS1%" echo Write-Host "  Downloading $n..."
+>> "%PS1%" echo Invoke-WebRequest $asset.browser_download_url -OutFile "$env:TEMP\vi.zip" -UseBasicParsing
+>> "%PS1%" echo Write-Host '  Extracting...'
+>> "%PS1%" echo Expand-Archive "$env:TEMP\vi.zip" -DestinationPath $dest -Force
+>> "%PS1%" echo Remove-Item "$env:TEMP\vi.zip" -Force
+>> "%PS1%" echo Write-Host '  OK'
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%PS1%"
+set "PS_ERR=%ERRORLEVEL%"
+del "%PS1%" 2>nul
+if %PS_ERR% neq 0 (
     echo.
-    echo   Download failed. Check your internet connection and try again.
+    echo  Download failed. Check your internet connection.
     goto :error
 )
 
-:: ── Run setup ─────────────────────────────────────────────────────────────────
+:: ── Run setup.py ──────────────────────────────────────────────────────────────
+echo.
+echo Setting up...
 cd /d "%INSTALL_DIR%"
 !PYTHON! setup.py
 if errorlevel 1 goto :error
@@ -81,7 +79,7 @@ goto :end
 
 :error
 echo.
-echo   Installation failed. See error above.
+echo  Installation failed. See error above.
 pause
 exit /b 1
 
