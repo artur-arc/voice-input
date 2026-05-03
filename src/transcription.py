@@ -172,36 +172,47 @@ class _WindowsTranscriber(Transcriber):
 
             logger.info("Model found in cache — loading (may take up to %ds)...", _WARM_UP_TIMEOUT)
 
-            # Run WhisperModel() in a sub-thread with a timeout.
-            # ctranslate2 can hang indefinitely on certain CPUs without raising an exception.
-            load_error: list[str] = []
-            loaded_model: list[Any] = []
+            # Try int8 first (fastest), fall back to float32 if int8 hangs or fails.
+            # ctranslate2 int8 requires AVX2/SSE4.2 and hangs on some CPUs silently.
+            for compute_type in ("int8", "float32"):
+                load_error: list[str] = []
+                loaded_model: list[Any] = []
 
-            def _load() -> None:
-                try:
-                    m = WhisperModel(self._model_name, device="cpu", compute_type="int8")
-                    loaded_model.append(m)
-                except Exception as exc:
-                    load_error.append(str(exc))
-                    logger.exception("Model load failed: %s", exc)
+                def _load(ct: str = compute_type) -> None:
+                    try:
+                        m = WhisperModel(self._model_name, device="cpu", compute_type=ct)
+                        loaded_model.append(m)
+                    except Exception as exc:
+                        load_error.append(str(exc))
+                        logger.exception("Model load failed (compute_type=%s): %s", ct, exc)
 
-            t = threading.Thread(target=_load, daemon=True)
-            t.start()
-            t.join(timeout=_WARM_UP_TIMEOUT)
+                t = threading.Thread(target=_load, daemon=True)
+                t.start()
+                t.join(timeout=_WARM_UP_TIMEOUT)
 
-            if t.is_alive():
+                if t.is_alive():
+                    logger.warning(
+                        "Model load timed out after %ds with compute_type=%s — trying next",
+                        _WARM_UP_TIMEOUT, compute_type,
+                    )
+                    continue  # try next compute_type; hung thread stays as daemon
+
+                if load_error:
+                    logger.warning(
+                        "compute_type=%s failed (%s) — trying next", compute_type, load_error[0]
+                    )
+                    continue
+
+                if loaded_model:
+                    self._model = loaded_model[0]
+                    logger.info("Model loaded: %s (compute_type=%s)", self._model_name, compute_type)
+                    break
+
+            if self._model is None and self._load_error is None:
                 self._load_error = (
-                    f"Model load timed out after {_WARM_UP_TIMEOUT}s. "
-                    "ctranslate2 may not support this CPU. Try a different compute_type."
+                    "Model failed to load with both int8 and float32. "
+                    "Check tray_windows.log for details."
                 )
-                logger.error(self._load_error)
-            elif load_error:
-                self._load_error = load_error[0]
-            elif loaded_model:
-                self._model = loaded_model[0]
-                logger.info("Model loaded: %s", self._model_name)
-            else:
-                self._load_error = "Model load thread exited without result"
                 logger.error(self._load_error)
 
         except Exception as exc:
