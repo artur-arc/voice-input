@@ -3,6 +3,11 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`4eec88a`](https://github.com/artur-arc/voice-input/commit/4eec88a71a3963f4d8e4bee7672ee4d077a1699f) Bump Python version to 3.13.3
+
+## v1.0.7 — 2026-05-03
+### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`51941e3`](https://github.com/artur-arc/voice-input/commit/51941e399670e6c4fe0937d8649cc2f7b7f77f56) Release v1.0.7
 - ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`8b80088`](https://github.com/artur-arc/voice-input/commit/8b80088e7f6ab1b950678c69c10cadc9c00c1f77) Update Russian translation settings
 
 ## v1.0.6 — 2026-05-03

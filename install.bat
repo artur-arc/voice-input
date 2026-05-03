@@ -3,8 +3,8 @@ setlocal enabledelayedexpansion
 
 set "INSTALL_DIR=%USERPROFILE%\voice-input"
 set "GITHUB_REPO=artur-arc/voice-input"
-set "PYTHON_VER=3.11.9"
-set "PYTHON_URL=https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe"
+set "PYTHON_VER=3.13.3"
+set "PYTHON_URL=https://www.python.org/ftp/python/3.13.3/python-3.13.3-amd64.exe"
 
 cls
 echo.
@@ -14,36 +14,43 @@ echo.
 echo  This will take a few minutes. Do not close this window.
 echo.
 
-:: ── Python 3.11+ ──────────────────────────────────────────────────────────────
+:: ── Python check ──────────────────────────────────────────────────────────────
 echo Checking Python...
 call :find_python
-if defined PYTHON goto :python_ok
 
-echo  Python not found. Installing automatically...
+if defined PYTHON (
+    call :get_version
+    echo  Found Python !PY_VER!
+    if !PY_MAJOR! geq 3 if !PY_MINOR! geq 11 (
+        echo  OK  Python !PY_VER! is compatible - using it.
+        goto :download
+    )
+    echo  Python !PY_VER! is too old ^(need 3.11+^). Installing Python %PYTHON_VER%...
+) else (
+    echo  Python not found. Installing Python %PYTHON_VER%...
+)
+
+:: ── Auto-install Python 3.13 ──────────────────────────────────────────────────
 echo.
 
-:: Try winget first (available on Windows 10 1709+ and Windows 11)
 winget --version >nul 2>&1
 if not errorlevel 1 (
     echo  Trying winget...
-    winget install --id Python.Python.3.11 -e --silent --scope user ^
+    winget install --id Python.Python.3.13 -e --silent --scope user ^
         --accept-package-agreements --accept-source-agreements
     if not errorlevel 1 (
         call :refresh_path
         call :find_python
-        if defined PYTHON goto :python_ok
+        if defined PYTHON goto :download
     )
 )
 
-:: Fallback: download Python installer directly from python.org
 echo  Downloading Python %PYTHON_VER% installer...
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "Invoke-WebRequest '%PYTHON_URL%' -OutFile '$env:TEMP\python-installer.exe' -UseBasicParsing"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest '%PYTHON_URL%' -OutFile '$env:TEMP\python-installer.exe' -UseBasicParsing"
 if errorlevel 1 (
     echo.
     echo  Download failed. Please install Python 3.11+ manually from:
     echo    https://www.python.org/downloads/
-    echo  Check "Add Python to PATH" during installation, then re-run this file.
     goto :error
 )
 echo  Installing Python %PYTHON_VER%...
@@ -58,15 +65,8 @@ if not defined PYTHON (
     goto :error
 )
 
-:python_ok
-for /f "tokens=2" %%V in ('!PYTHON! --version 2^>^&1') do set "PY_VER=%%V"
-for /f "tokens=1 delims=." %%M in ("!PY_VER!") do set "PY_MAJOR=%%M"
-for /f "tokens=2 delims=." %%m in ("!PY_VER!") do set "PY_MINOR=%%m"
-if !PY_MAJOR! lss 3 ( echo  Python 3.11+ required. Found: !PY_VER! & goto :error )
-if !PY_MINOR! lss 11 ( echo  Python 3.11+ required. Found: !PY_VER! & goto :error )
-echo  OK  Python !PY_VER!
-
-:: ── Download latest release zip via PowerShell ───────────────────────────────
+:: ── Download Voice Input ──────────────────────────────────────────────────────
+:download
 echo.
 echo Downloading Voice Input...
 if exist "%INSTALL_DIR%" rmdir /s /q "%INSTALL_DIR%"
@@ -112,6 +112,12 @@ set "PYTHON="
 py      --version >nul 2>&1 && set "PYTHON=py"      && goto :eof
 python3 --version >nul 2>&1 && set "PYTHON=python3" && goto :eof
 python  --version >nul 2>&1 && set "PYTHON=python"  && goto :eof
+goto :eof
+
+:get_version
+for /f "tokens=2" %%V in ('!PYTHON! --version 2^>^&1') do set "PY_VER=%%V"
+for /f "tokens=1 delims=." %%M in ("!PY_VER!") do set "PY_MAJOR=%%M"
+for /f "tokens=2 delims=." %%m in ("!PY_VER!") do set "PY_MINOR=%%m"
 goto :eof
 
 :refresh_path
