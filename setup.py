@@ -115,8 +115,24 @@ def install_packages() -> None:
         capture_output=True,
     )
     if r.returncode == 0:
-        ok("Packages already installed")
-        return
+        # On Windows also verify ctranslate2 is within the pinned range (<4.7).
+        # If 4.7+ is installed, downgrade it — that version crashes on some CPUs.
+        if IS_WINDOWS:
+            ct2 = subprocess.run(
+                [str(VENV_PY), "-m", "pip", "show", "ctranslate2"],
+                capture_output=True, text=True,
+            )
+            ver_line = next((l for l in ct2.stdout.splitlines() if l.startswith("Version:")), "")
+            ver = ver_line.split(":", 1)[-1].strip()
+            parts = [int(x) for x in ver.split(".")[:2]] if ver else [0, 0]
+            if parts >= [4, 7]:
+                print(f"  ctranslate2 {ver} detected — downgrading to <4.7 (stability fix)...")
+            else:
+                ok("Packages already installed")
+                return
+        else:
+            ok("Packages already installed")
+            return
     subprocess.run(
         [str(VENV_PY), "-m", "pip", "install", "--quiet", "--upgrade", "pip"],
         check=True,
@@ -124,7 +140,8 @@ def install_packages() -> None:
     label = "ctranslate2 is ~150 MB" if IS_WINDOWS else "mlx-whisper is ~300 MB"
     print(f"  Installing packages ({label} — please wait)...")
     subprocess.run(
-        [str(VENV_PY), "-m", "pip", "install", "--progress-bar", "on", "-r", str(REQUIREMENTS)],
+        [str(VENV_PY), "-m", "pip", "install", "--upgrade", "--progress-bar", "on",
+         "-r", str(REQUIREMENTS)],
         check=True,
     )
     ok("All packages installed")
