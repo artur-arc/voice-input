@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
-- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`96a12a8`](https://github.com/artur-arc/voice-input/commit/96a12a8798067365c86cb481bef06360c63d4a2d) Ensure log file handler flushes after each record
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`b299a66`](https://github.com/artur-arc/voice-input/commit/b299a66d46f8718039efc9a1bd0e561bad15a3e5) Ensure log file handler flushes after each record
 
 ## v1.0.17 — 2026-05-03
 ### 2026-05-03
