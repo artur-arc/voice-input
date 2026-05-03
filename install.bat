@@ -115,8 +115,7 @@ python  --version >nul 2>&1 && set "PYTHON=python"  && goto :eof
 goto :eof
 
 :refresh_path
-powershell -NoProfile -Command ^
-    "$p = [Environment]::GetEnvironmentVariable('PATH','Machine') + ';' + [Environment]::GetEnvironmentVariable('PATH','User'); $p | Out-File '$env:TEMP\vi-path.txt' -Encoding ASCII -NoNewline"
+powershell -NoProfile -Command "[Environment]::GetEnvironmentVariable('PATH','Machine')+';'+[Environment]::GetEnvironmentVariable('PATH','User')" > "%TEMP%\vi-path.txt"
 set /p "NEW_PATH=" < "%TEMP%\vi-path.txt"
 del "%TEMP%\vi-path.txt" 2>nul
 if defined NEW_PATH set "PATH=!NEW_PATH!"
