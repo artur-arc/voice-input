@@ -13,7 +13,7 @@ from Quartz import (
     kCGHIDEventTap,
 )
 
-_V_KEYCODE = 9
+_V_KEYCODE: int = 9
 
 
 def has_accessibility() -> bool:

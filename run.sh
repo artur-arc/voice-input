@@ -11,4 +11,4 @@ if [ ! -d .venv ] || [ "$(cat "$HASH_FILE" 2>/dev/null)" != "$REQ_HASH" ]; then
     echo "$REQ_HASH" > "$HASH_FILE"
 fi
 
-exec .venv/bin/python -u src/voice_input.py
+exec .venv/bin/python -u src/main.py

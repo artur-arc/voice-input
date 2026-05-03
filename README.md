@@ -30,6 +30,8 @@ and Python 3.11+ if missing, create a virtual environment, install Python packag
 the Whisper model (~1.5 GB), walk through three permission prompts, and register a launchd
 agent so the service starts automatically at login.
 
+> After installation the app starts automatically at every login — no action needed after a reboot.
+
 When the permission prompts appear, find `python` or `Terminal` in each System Settings pane
 and enable the toggle.
 
