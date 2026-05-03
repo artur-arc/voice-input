@@ -106,132 +106,59 @@ PYEOF
     ok "Model downloaded and warmed up"
 fi
 
-# ── 6. macOS permissions ──────────────────────────────────────────────────────
-step "macOS permissions"
-echo ""
-echo "  macOS will ask for 3 permissions. Click 'Allow' in each dialog."
-echo ""
-
-# Waits in a loop until check_cmd exits 0, printing a dot every second.
-wait_for_perm() {
-    local check_cmd="$1"
-    local max=60
-    local i=0
-    while ! eval "$check_cmd" &>/dev/null 2>&1; do
-        sleep 1
-        i=$((i+1))
-        printf "."
-        if [ "$i" -ge "$max" ]; then
-            echo ""
-            warn "Timed out. Re-run ./setup.sh after granting the permission."
-            return 1
-        fi
-    done
-    echo ""
-    return 0
-}
-
-# 6a. Microphone — macOS shows native dialog automatically on first access
-echo -e "  ${BOLD}1/3  Microphone${NC}"
-.venv/bin/python - <<'PYEOF' 2>/dev/null || true
-import sounddevice as sd, numpy as np
-try:
-    sd.rec(100, samplerate=16000, channels=1, dtype="float32", blocking=True)
-except Exception:
-    pass
-PYEOF
-MIC_CHECK='.venv/bin/python -c "
-import sounddevice as sd, numpy as np
-sd.rec(100, samplerate=16000, channels=1, dtype=\"float32\", blocking=True)
-"'
-if eval "$MIC_CHECK" &>/dev/null 2>&1; then
-    ok "Microphone — granted"
-else
-    echo "    Click 'Allow' in the macOS dialog..."
-    wait_for_perm "$MIC_CHECK" && ok "Microphone — granted" || true
-fi
-
-# 6b. Input Monitoring — pynput triggers native dialog on first listener start
-echo ""
-echo -e "  ${BOLD}2/3  Input Monitoring${NC} (hotkey detection)"
-.venv/bin/python - <<'PYEOF' 2>/dev/null || true
-from pynput import keyboard as kb
-import threading
-done = threading.Event()
-listener = kb.Listener(on_press=lambda k: done.set())
-listener.start()
-done.wait(timeout=0.5)
-listener.stop()
-PYEOF
-IM_CHECK='.venv/bin/python -c "
-from pynput import keyboard as kb
-import threading
-done = threading.Event()
-l = kb.Listener(on_press=lambda k: done.set())
-l.start(); done.wait(timeout=0.3); l.stop()
-if not done.is_set(): raise RuntimeError()
-"'
-if eval "$IM_CHECK" &>/dev/null 2>&1; then
-    ok "Input Monitoring — granted"
-else
-    echo "    Click 'Allow' in the dialog, then press any key..."
-    open "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
-    wait_for_perm "$IM_CHECK" && ok "Input Monitoring — granted" || true
-fi
-
-# 6c. Accessibility — trigger the system prompt dialog
-echo ""
-echo -e "  ${BOLD}3/3  Accessibility${NC} (paste text at cursor)"
-.venv/bin/python - <<'PYEOF' 2>/dev/null || true
-from ApplicationServices import AXIsProcessTrustedWithOptions
-AXIsProcessTrustedWithOptions({"AXTrustedCheckOptionPrompt": True})
-PYEOF
-AX_CHECK='.venv/bin/python -c "
-import sys; sys.path.insert(0,\"src\")
-from paste_util import has_accessibility
-sys.exit(0 if has_accessibility() else 1)
-"'
-if eval "$AX_CHECK" &>/dev/null 2>&1; then
-    ok "Accessibility — granted"
-else
-    echo "    System Settings opened → find 'Terminal' or 'python' → enable the toggle."
-    open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-    echo "    Press Enter when done..."
-    read -r -p "    "
-    eval "$AX_CHECK" &>/dev/null 2>&1 && ok "Accessibility — granted" \
-        || warn "Accessibility not granted — text will be copied to clipboard only."
-fi
-
-# ── 7. launchd auto-start ─────────────────────────────────────────────────────
+# ── 6. launchd auto-start ─────────────────────────────────────────────────────
 step "Auto-start (launchd)"
 ./install_launchd.sh install
 ok "Voice input service started"
 ok "Menu bar app started"
 
+# ── 7. macOS permissions ──────────────────────────────────────────────────────
+step "macOS Permissions"
+echo ""
+echo "  Voice Input needs 3 permissions to work fully."
+echo "  Each step opens System Settings — grant the permission, then return here."
+echo "  You can skip any step and grant permissions later via the menu bar icon."
+echo ""
+echo "  In each panel, look for 'python3' under ~/voice-input/.venv/bin/"
+echo "  and enable the toggle next to it."
+echo ""
+
+# 7a. Microphone
+echo -e "  ${BOLD}1/3  Microphone${NC} — allows the app to record audio"
+read -r -p "      Press Enter to open System Settings…"
+open "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
+echo ""
+read -r -p "      Done? Press Enter to continue…"
+echo ""
+
+# 7b. Input Monitoring
+echo -e "  ${BOLD}2/3  Input Monitoring${NC} — allows the app to detect the Right Cmd hotkey"
+read -r -p "      Press Enter to open System Settings…"
+open "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
+echo ""
+read -r -p "      Done? Press Enter to continue…"
+echo ""
+
+# 7c. Accessibility
+echo -e "  ${BOLD}3/3  Accessibility${NC} — allows the app to paste text at the cursor"
+read -r -p "      Press Enter to open System Settings…"
+open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+echo ""
+read -r -p "      Done? Press Enter to continue…"
+echo ""
+
 # ── 8. Summary ────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}── Done ──────────────────────────────────────────────────────────────${NC}"
 echo ""
-
-# Verify final state
-AX_OK=$(.venv/bin/python -c "import sys; sys.path.insert(0,'src'); from paste_util import has_accessibility; print(has_accessibility())" 2>/dev/null)
-MIC_OK=$(.venv/bin/python -c "import sounddevice as sd, numpy as np; sd.rec(100,samplerate=16000,channels=1,dtype='float32',blocking=True); print('ok')" 2>/dev/null | grep -c ok || echo 0)
-
-echo "  Status:"
-[ "$AX_OK" = "True" ] && ok "Accessibility (auto-paste)" || warn "Accessibility not granted — paste disabled"
-[ "$MIC_OK" -gt 0   ] && ok "Microphone" || warn "Microphone not granted — recording disabled"
 ok "Whisper large-v3 (Apple Silicon)"
-ok "launchd auto-start"
+ok "launchd auto-start (voice input + menu bar)"
 echo ""
-echo "  Menu bar:"
-echo "    Look for the microphone icon 🎤 in the top-right status bar."
-echo "    Click it to switch language mode, select microphone, or update."
+echo "  Look for the microphone icon in the top-right menu bar."
+echo "  Click it to switch language, select microphone, check permissions, or update."
 echo ""
 echo "  Hotkey:"
 echo "    Right Cmd  (hold → release)  record speech → paste transcribed text"
-echo ""
-echo "  Config: $(pwd)/voice-input-config.json"
-echo "  Logs:   tail -f $(pwd)/voice_input.log"
 echo ""
 echo "  To stop:    ./install_launchd.sh stop"
 echo "  To remove:  ./install_launchd.sh uninstall"
