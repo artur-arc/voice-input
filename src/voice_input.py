@@ -12,7 +12,6 @@ import mlx_whisper
 from pynput import keyboard
 from pynput.keyboard import Key
 
-from cleanup import TranscriptCleaner
 from paste_util import accessibility_binary, has_accessibility, paste_text
 
 SAMPLE_RATE = 16000
@@ -30,12 +29,8 @@ MODES = [
 ]
 
 CONFIG_FILE = Path(__file__).parent.parent / "voice-input-config.json"
-
 config_lock = threading.Lock()
 mode_index = 1
-cleanup_enabled = False
-cleanup_model = "llama3.2"
-cleaner: TranscriptCleaner | None = None
 
 
 def _read_voice_cfg() -> dict:
@@ -44,7 +39,7 @@ def _read_voice_cfg() -> dict:
 
 
 def load_config() -> None:
-    global mode_index, cleanup_enabled, cleanup_model, cleaner
+    global mode_index
     try:
         vcfg = _read_voice_cfg()
         new_index = mode_index
@@ -54,9 +49,6 @@ def load_config() -> None:
                 break
         with config_lock:
             mode_index = new_index
-            cleanup_enabled = bool(vcfg.get("cleanup", False))
-            cleanup_model = vcfg.get("cleanup_model", "llama3.2")
-            cleaner = TranscriptCleaner(cleanup_model) if cleanup_enabled else None
     except Exception as e:
         print(f"Config load error: {e}")
 
@@ -86,7 +78,7 @@ def watch_config() -> None:
                 last_mtime = mtime
                 load_config()
                 m = current_mode()
-                print(f"Config reloaded → mode: {m['label']}, cleanup: {cleanup_enabled} ({cleanup_model})")
+                print(f"Config reloaded → mode: {m['label']}")
         except Exception:
             pass
 
@@ -131,7 +123,7 @@ mlx_whisper.transcribe(np.zeros(SAMPLE_RATE, dtype=np.float32), path_or_hf_repo=
 
 m = current_mode()
 ax_ok = has_accessibility()
-print(f"Ready. Mode: {m['label']} | cleanup: {cleanup_enabled} | accessibility: {'✓' if ax_ok else '✗ (paste disabled)'}")
+print(f"Ready. Mode: {m['label']} | accessibility: {'✓' if ax_ok else '✗ (paste disabled)'}")
 if not ax_ok:
     print("  → Add to Accessibility: System Settings > Privacy & Security > Accessibility")
     print(f"  → Binary: {accessibility_binary()}")
@@ -227,15 +219,8 @@ def _transcribe_and_paste(audio: np.ndarray) -> None:
             play("Funk")
             return
 
-        with config_lock:
-            active_cleaner = cleaner
-
-        if active_cleaner is not None:
-            text = active_cleaner.clean(text, m["language"])
-
         elapsed = time.time() - t0
-        tag = f"{m['label']}+clean" if active_cleaner is not None else m['label']
-        print(f"[{elapsed:.1f}s] [{tag}] {text}")
+        print(f"[{elapsed:.1f}s] [{m['label']}] {text}")
 
         pasted = paste_text(text)
         if not pasted:
