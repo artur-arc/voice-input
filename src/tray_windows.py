@@ -352,13 +352,16 @@ class VoiceInputTray:
         devices = _list_input_devices()
 
         # Language modes (radio)
+        # pystray 0.19.5 inspects ALL positional params (incl. defaults),
+        # so lambdas with capture defaults (3 params) are rejected.
+        # Wrap with an immediately-called outer lambda to produce a clean 2-param callable.
         for m in MODES:
             _key = m.key
             _label = m.label
             items.append(pystray.MenuItem(
                 _label,
-                lambda icon, item, k=_key: self._on_mode(k),
-                checked=lambda item, k=_key: self._config.current_mode().key == k,
+                (lambda k: lambda icon, item: self._on_mode(k))(_key),
+                checked=(lambda k: lambda item: self._config.current_mode().key == k)(_key),
                 radio=True,
             ))
 
@@ -375,8 +378,8 @@ class VoiceInputTray:
             _n = name
             items.append(pystray.MenuItem(
                 _n,
-                lambda icon, item, n=_n: self._on_device(n),
-                checked=lambda item, n=_n: self._config.input_device() == n,
+                (lambda n: lambda icon, item: self._on_device(n))(_n),
+                checked=(lambda n: lambda item: self._config.input_device() == n)(_n),
                 radio=True,
             ))
 
@@ -386,7 +389,7 @@ class VoiceInputTray:
         perm_items = [
             pystray.MenuItem(
                 name,
-                lambda icon, item, u=url: os.startfile(u),
+                (lambda u: lambda icon, item: os.startfile(u))(url),
             )
             for name, url in _WIN_PERM_URLS.items()
         ]

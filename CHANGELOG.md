@@ -1,8 +1,9 @@
 # Changelog
 
 All notable changes to voice-input.
-## [unreleased]
+## v1.0.15 — 2026-05-03
 ### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`6f46359`](https://github.com/artur-arc/voice-input/commit/6f46359b24360423d0aa96ff0dbd798914223541) Release v1.0.15
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`f3d46e3`](https://github.com/artur-arc/voice-input/commit/f3d46e3c0901d722f4852c55d9a81cc1033147cc) Remove model warm-up step
 
 ## v1.0.14 — 2026-05-03
