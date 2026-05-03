@@ -121,6 +121,21 @@ unload_menu_agent() {
     launchctl bootout "$DOMAIN/$MENU_LABEL" 2>/dev/null || launchctl unload "$MENU_PLIST_DST" 2>/dev/null || true
 }
 
+# Wait up to 8s for a service to appear in launchctl list, retry bootstrap once if needed
+wait_for_service() {
+    local label="$1" plist="$2" name="$3"
+    local i=0
+    while [ $i -lt 8 ]; do
+        launchctl list "$label" &>/dev/null && echo "✓ $name" && return 0
+        sleep 1; i=$((i+1))
+    done
+    # Not running — try bootstrap one more time explicitly
+    launchctl bootstrap "$DOMAIN" "$plist" 2>/dev/null || true
+    sleep 3
+    launchctl list "$label" &>/dev/null && echo "✓ $name" && return 0
+    echo "⚠  $name did not start — run: ./install_launchd.sh install"
+}
+
 # ── Commands ──────────────────────────────────────────────────────────────────
 
 case "${1:-install}" in
@@ -129,9 +144,9 @@ case "${1:-install}" in
     generate_menu_plist
     unload_agent;      load_agent
     unload_menu_agent; load_menu_agent
-    echo "✓ Installed and started."
-    echo "  Voice input logs: $DIR/voice_input.log"
-    echo "  Menu bar logs:    $DIR/menu_bar.log"
+    wait_for_service "$LABEL"      "$PLIST_DST"      "Voice input started"
+    wait_for_service "$MENU_LABEL" "$MENU_PLIST_DST" "Menu bar started"
+    echo "  Logs: $DIR/voice_input.log | $DIR/menu_bar.log"
     ;;
   stop)
     unload_agent
