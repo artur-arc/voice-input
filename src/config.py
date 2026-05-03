@@ -63,6 +63,16 @@ class ConfigManager:
         with self._lock:
             return self._input_device
 
+    def save_device(self, name: str | None) -> None:
+        try:
+            raw: dict[str, Any] = json.loads(self._config_file.read_text())
+        except Exception:
+            raw = {}
+        raw["input_device"] = name
+        self._config_file.write_text(json.dumps(raw, indent=4))
+        with self._lock:
+            self._input_device = name
+
     def watch(self, on_change: Callable[[int], None]) -> None:
         if self._watch_thread is not None:
             return

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18">
+  <!-- Studio condenser microphone — macOS template image (black on transparent) -->
+  <!-- Capsule body -->
+  <rect x="5" y="0.5" width="8" height="10.5" rx="4" fill="black"/>
+  <!-- Shock mount bracket (U-arc below capsule) -->
+  <path d="M2.5 8 Q2.5 13.5 9 13.5 Q15.5 13.5 15.5 8"
+        fill="none" stroke="black" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Stand pole -->
+  <line x1="9" y1="13.5" x2="9" y2="15.5" stroke="black" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Base -->
+  <line x1="5.5" y1="17" x2="12.5" y2="17" stroke="black" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
