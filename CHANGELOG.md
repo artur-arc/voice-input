@@ -1,6 +1,10 @@
 # Changelog
 
 All notable changes to voice-input.
+## [unreleased]
+### 2026-05-03
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`b7003af`](https://github.com/artur-arc/voice-input/commit/b7003af84a04a5cb18f724797f54bf98127faa8b) Fail fast if model not cached, add 300s load timeout
+
 ## v1.0.23 — 2026-05-03
 ### 2026-05-03
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`e7fbbcb`](https://github.com/artur-arc/voice-input/commit/e7fbbcb4f2ba34cc65c83aed841b561fa2c44e89) Release v1.0.23

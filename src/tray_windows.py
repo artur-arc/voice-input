@@ -514,10 +514,24 @@ class VoiceInputTray:
         icon.stop()
 
 
+def _acquire_single_instance_lock() -> bool:
+    """Return True if this is the only running instance (Windows named mutex)."""
+    import ctypes
+    _MUTEX_NAME = "Global\\VoiceInputTrayApp"
+    mutex = ctypes.windll.kernel32.CreateMutexW(None, False, _MUTEX_NAME)
+    # ERROR_ALREADY_EXISTS (183) means another instance holds the mutex
+    return ctypes.windll.kernel32.GetLastError() != 183
+
+
 def main() -> None:
     import os as _os
     log_file = _REPO_DIR / "tray_windows.log"
     setup_logging(log_file)  # pythonw.exe has no stdout — always log to file
+
+    if not _acquire_single_instance_lock():
+        logger.warning("Another instance is already running — exiting (pid=%d)", _os.getpid())
+        return
+
     logger.info("=== Windows tray starting (version %s, pid=%d) ===",
                 _read_version(_VERSION_FILE), _os.getpid())
     try:
