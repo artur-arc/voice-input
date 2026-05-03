@@ -5,6 +5,7 @@ import contextlib
 import io
 import logging
 import sys
+import threading
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -159,11 +160,11 @@ class _WindowsTranscriber(Transcriber):
     """faster-whisper backend — Windows/CPU (int8 quantization)."""
 
     def __init__(self, model_repo: str = MODEL_REPO) -> None:
-        import threading
         self._model_name = _detect_win_model()
         self._model: WhisperModel | None = None
         self._ready = threading.Event()
         self._load_error: str | None = None
+        self._transcribe_lock = threading.Lock()
         logger.info("Windows model selected: %s", self._model_name)
 
     @property
@@ -273,5 +274,26 @@ class _WindowsTranscriber(Transcriber):
         }
         if mode.task == "translate":
             kwargs["task"] = "translate"
-        segments, _ = self._model.transcribe(audio, **kwargs)
+        with self._transcribe_lock:
+            result: list[Any] = []
+            exc_box: list[str] = []
+
+            def _run() -> None:
+                try:
+                    result.append(self._model.transcribe(audio, **kwargs))  # type: ignore[union-attr]
+                except Exception as e:
+                    exc_box.append(str(e))
+
+            t = threading.Thread(target=_run, daemon=True)
+            t.start()
+            t.join(timeout=60)
+            if t.is_alive():
+                logger.error("Transcription timed out after 60s — model may be stuck")
+                return None
+            if exc_box:
+                logger.error("Transcription error: %s", exc_box[0])
+                return None
+            if not result:
+                return None
+            segments, _ = result[0]
         return " ".join(s.text for s in segments).strip() or None

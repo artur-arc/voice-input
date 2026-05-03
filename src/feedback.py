@@ -1,4 +1,4 @@
-"""Audio feedback — macOS uses afplay/osascript, Windows uses winsound/plyer."""
+"""Audio feedback — macOS uses afplay/osascript, Windows uses winsound/pystray."""
 from __future__ import annotations
 
 import logging
@@ -6,6 +6,7 @@ import subprocess
 import sys
 import threading
 from abc import ABC, abstractmethod
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -56,17 +57,20 @@ class _MacFeedback(UserFeedback):
 
 
 class _WindowsFeedback(UserFeedback):
+    def __init__(self) -> None:
+        self._icon: Any = None
+
+    def set_notify_icon(self, icon: Any) -> None:
+        self._icon = icon
+
     def notify(self, title: str, message: str) -> None:
+        if self._icon is None:
+            logger.warning("Notification skipped (icon not ready): %s", message)
+            return
         try:
-            from plyer import notification  # type: ignore[import]  # Windows-only package
-            notification.notify(
-                title=title,
-                message=message,
-                app_name="Voice Input",
-                timeout=4,
-            )
+            self._icon.notify(message, title)
         except Exception:
-            logger.exception("Windows notification failed")
+            logger.exception("pystray notification failed")
 
     def play(self, sound: str) -> None:
         try:

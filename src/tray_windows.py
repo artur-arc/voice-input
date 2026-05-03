@@ -1,6 +1,7 @@
 """Windows system tray app for voice-input — mode, microphone, restart & update."""
 from __future__ import annotations
 
+import ctypes
 import logging
 import os
 import subprocess
@@ -244,6 +245,12 @@ class _WindowsUpdater:
         callback(None, remote_ver if has_update else None)
 
     def _restart_process(self) -> None:
+        global _mutex_handle
+        # Release the mutex before spawning the new process so it can acquire it
+        # immediately without hitting ERROR_ALREADY_EXISTS.
+        if _mutex_handle:
+            ctypes.windll.kernel32.CloseHandle(_mutex_handle)
+            _mutex_handle = 0
         try:
             # DETACHED_PROCESS: new process is independent of this one on Windows.
             # close_fds=True raises ValueError in pythonw.exe (no console handles).
@@ -289,6 +296,8 @@ class VoiceInputTray:
             title=f"Voice Input — {mode.label}",
             menu=self._build_menu(),
         )
+        if hasattr(self._feedback, "set_notify_icon"):
+            self._feedback.set_notify_icon(self._icon)
 
     def run(self) -> None:
         """Start background threads then block on pystray main loop."""
@@ -501,7 +510,6 @@ class VoiceInputTray:
             logger.info("Process restarted")
 
     def _on_uninstall(self, icon: Any, item: Any) -> None:
-        import ctypes
         startup = (
             Path(os.environ.get("APPDATA", ""))
             / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
@@ -521,13 +529,18 @@ class VoiceInputTray:
         icon.stop()
 
 
+_mutex_handle: int = 0
+
+
 def _acquire_single_instance_lock() -> bool:
     """Return True if this is the only running instance (Windows named mutex)."""
-    import ctypes
+    global _mutex_handle
     _MUTEX_NAME = "Global\\VoiceInputTrayApp"
-    mutex = ctypes.windll.kernel32.CreateMutexW(None, False, _MUTEX_NAME)
-    # ERROR_ALREADY_EXISTS (183) means another instance holds the mutex
-    return ctypes.windll.kernel32.GetLastError() != 183
+    handle = ctypes.windll.kernel32.CreateMutexW(None, False, _MUTEX_NAME)
+    if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        return False
+    _mutex_handle = handle
+    return True
 
 
 def main() -> None:
