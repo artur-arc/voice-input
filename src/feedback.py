@@ -58,7 +58,7 @@ class _MacFeedback(UserFeedback):
 class _WindowsFeedback(UserFeedback):
     def notify(self, title: str, message: str) -> None:
         try:
-            from plyer import notification  # lazy — Windows only package
+            from plyer import notification  # type: ignore[import]  # Windows-only package
             notification.notify(
                 title=title,
                 message=message,
