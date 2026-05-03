@@ -156,28 +156,25 @@ def download_model() -> None:
         cached = _cached_win_model(cache_dir)
 
         if cached == target:
-            # Validate model.bin size — ctranslate2 v3 models (float16) are ~2× the size
-            # of v4 int8 models and cause STATUS_ACCESS_VIOLATION (0xC0000005) on load.
+            # Validate model.bin: missing = incomplete download; oversized = ctranslate2 v3
+            # format (float16 ~2× larger) which crashes ctranslate2 v4 with 0xC0000005.
             # int8 upper bounds (MB): small≤300, medium≤900, large-v3≤2000
             _int8_max = {"small": 300, "medium": 900, "large-v3": 2000}
             model_dir = cache_dir / f"models--Systran--faster-whisper-{target}"
             model_bins = sorted(model_dir.glob("**/model.bin"))
-            stale = False
             if model_bins:
                 size_mb = model_bins[0].stat().st_size / 1_048_576
                 max_mb = _int8_max.get(target, 2000)
-                if size_mb > max_mb:
-                    print(f"  Cached model.bin is {size_mb:.0f} MB "
-                          f"(int8 {target} should be ≤{max_mb} MB).")
-                    print("  Old ctranslate2 v3 format detected — deleting and re-downloading...")
-                    shutil.rmtree(model_dir, ignore_errors=True)
-                    # Also wipe the compute_type cache so it re-probes on next launch.
-                    ct_cache = REPO_DIR / ".ct2_compute_type"
-                    ct_cache.unlink(missing_ok=True)
-                    stale = True
-            if not stale:
-                ok(f"Model already correct ({target})")
-                return
+                if size_mb <= max_mb:
+                    ok(f"Model already correct ({target})")
+                    return
+                print(f"  Cached model.bin is {size_mb:.0f} MB "
+                      f"(int8 {target} should be ≤{max_mb} MB).")
+                print("  Old ctranslate2 v3 format detected — re-downloading...")
+            else:
+                print("  Model directory incomplete (model.bin missing) — re-downloading...")
+            shutil.rmtree(model_dir, ignore_errors=True)
+            (REPO_DIR / ".ct2_compute_type").unlink(missing_ok=True)
 
         sizes = {"large-v3": "~1.5 GB", "medium": "~490 MB", "small": "~250 MB"}
         if cached:
