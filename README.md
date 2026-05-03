@@ -3,60 +3,35 @@
 Hold <kbd>⌘ Right Cmd</kbd>, speak, release — the transcribed text is pasted at the cursor in any app: browser, notes, chat, code editor, any text field.
 A microphone icon in the menu bar gives access to all settings. <kbd>⌥ Right Option</kbd> cycles language modes as a secondary shortcut.
 
-Runs as a background launchd service on Apple Silicon Macs. Uses mlx-whisper with the
-`whisper-large-v3-mlx` model, which runs entirely on the Neural Engine.
-
-Supported on macOS (Apple Silicon) and Windows (x86_64). Requirements and installation
-differ by platform — see the sections below.
+macOS uses mlx-whisper on Apple Silicon (Neural Engine). Windows uses faster-whisper on CPU.
 
 ## Requirements
 
-### macOS requirements
-
-- Apple Silicon Mac (arm64 only — mlx-whisper does not run on Intel)
-- macOS 12+
-- Python 3.11+ (`setup.sh` installs it via Homebrew if missing)
-- ~2 GB of disk space for the model and virtual environment
-- Three permissions: Microphone, Input Monitoring, Accessibility
-
-### Windows requirements
-
-- Windows 10 or later, x86_64
-- Python 3.11+ (`setup-windows.py` installs it if missing)
-- ~2 GB of disk space for the model and virtual environment
-- One permission: Microphone (Windows Settings → Privacy & Security → Microphone)
+| | macOS | Windows |
+|---|---|---|
+| Hardware | Apple Silicon (M1/M2/M3/M4) | x86_64 |
+| OS | macOS 12+ | Windows 10+ |
+| Python | installed automatically | 3.11+ — install from [python.org](https://www.python.org/downloads/), check *Add Python to PATH* |
+| Git | installed automatically | install from [git-scm.com](https://git-scm.com/download/win) |
+| Disk | ~2 GB | ~2 GB |
 
 ## Installation
 
-### macOS installation
+**Everyone downloads the same file:**
+[**Download install.sh**](https://raw.githubusercontent.com/artur-arc/voice-input/main/install.sh)
+*(if it opens as text in your browser, right-click the link → Save Link As)*
 
-**Option A (recommended):** [Download install.command](https://raw.githubusercontent.com/artur-arc/voice-input/main/install.command), then double-click it in Finder. macOS opens Terminal and runs the full install automatically. No Terminal knowledge needed. *(If the file opens as text in your browser, right-click the link → Save Link As)*
+**macOS** — double-click `install.sh` in Finder. Terminal opens and runs the full setup automatically.
 
-**Option B:**
+**Windows** — open Git Bash (right-click on Desktop → *Git Bash Here*), then run:
 
 ```bash
-git clone https://github.com/artur-arc/voice-input && cd voice-input && ./setup.sh
+bash ~/Downloads/install.sh
 ```
 
-Both options handle everything in order: check that you are on Apple Silicon, install Homebrew
-and Python 3.11+ if missing, create a virtual environment, install Python packages, download
-the Whisper model (~1.5 GB), walk through three permission prompts, and register a launchd
-agent so the service starts automatically at login.
+The installer detects the platform automatically, downloads the Whisper model (~1.5 GB), registers autostart, and opens permission settings where needed.
 
-> After installation the app starts automatically at every login — no action needed after a reboot.
-
-When the permission prompts appear, find `python` or `Terminal` in each System Settings pane
-and enable the toggle.
-
-### Windows installation
-
-1. [Download install.bat](https://raw.githubusercontent.com/artur-arc/voice-input/main/install.bat)
-   *(if it opens as text in your browser, right-click the link → Save Link As)*
-2. Double-click `install.bat`. A terminal window opens and runs the setup automatically.
-3. Wait about 5 minutes while the Whisper model downloads (~1.5 GB).
-4. When setup finishes, a voice-input icon appears in the system tray (bottom-right corner).
-
-> After installation the app starts automatically at every login — no action needed after a reboot.
+> After installation the app starts automatically at every login.
 
 ## Permissions
 

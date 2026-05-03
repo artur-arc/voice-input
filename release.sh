@@ -37,11 +37,19 @@ git tag "$TAG"
 git push origin HEAD
 git push origin "$TAG"
 
+# ── Build Windows zip asset ───────────────────────────────────────────────────
+ZIP_NAME="voice-input-$NEXT-windows.zip"
+zip -r "$ZIP_NAME" src/ assets/ requirements-windows.txt VERSION voice-input-config.json \
+  -x "src/__pycache__/*" -x "src/*.pyc" -x "*/.DS_Store"
+
 # ── GitHub release with notes from this version's CHANGELOG section ───────────
 NOTES=$(git-cliff --config cliff.toml --unreleased --strip all --tag "$TAG" 2>/dev/null || echo "Release $TAG")
 gh release create "$TAG" \
   --title "Release $TAG" \
-  --notes "$NOTES"
+  --notes "$NOTES" \
+  "$ZIP_NAME"
+
+rm -f "$ZIP_NAME"
 
 echo ""
 echo "✅ Released $TAG and published to GitHub!"

@@ -3,7 +3,8 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`55e4607`](https://github.com/artur-arc/voice-input/commit/55e46070edf5fb57d4d9fefacddc569ac786b7c5) Update installer to support Windows
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`fdbdb58`](https://github.com/artur-arc/voice-input/commit/fdbdb58eac6f2bdef9bb8bd6c81c946da97ee999) Update updater to handle GitHub releases and
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`c0c92f1`](https://github.com/artur-arc/voice-input/commit/c0c92f132c01ccf71a3cfa6a7418c2125b5c4553) Update installer to support Windows
 - ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`304d400`](https://github.com/artur-arc/voice-input/commit/304d400bb75da5805ea7a2f764588582eb7719bf) Add Windows installer and requirements
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`8689fca`](https://github.com/artur-arc/voice-input/commit/8689fca27458469d39053b72154f791e4e9277bc) Update logging for restart and update operations
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`2b52185`](https://github.com/artur-arc/voice-input/commit/2b52185d1afe5503853a3e5710ceef328d7aea26) Wait for services to start before completing

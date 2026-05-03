@@ -87,7 +87,9 @@ def _load_icon() -> Any:
 
 
 class _WindowsUpdater:
-    """git fetch → version compare → pull → pip install → restart process."""
+    """Update via GitHub Releases (installer) or git-pull (cloned repo), then restart."""
+
+    _GITHUB_API = "https://api.github.com/repos/artur-arc/voice-input/releases/latest"
 
     def __init__(self, repo: Path) -> None:
         self._repo = repo
@@ -107,12 +109,15 @@ class _WindowsUpdater:
 
     def _run(self, callback: Callable[[str | None, str | None], None]) -> None:
         try:
-            self._do(callback)
+            if (self._repo / ".git").exists():
+                self._do_git(callback)
+            else:
+                self._do_github(callback)
         finally:
             with self._lock:
                 self._running = False
 
-    def _do(self, callback: Callable[[str | None, str | None], None]) -> None:
+    def _do_git(self, callback: Callable[[str | None, str | None], None]) -> None:
         repo = self._repo
         local_ver = _read_version(_VERSION_FILE)
         try:
@@ -150,6 +155,70 @@ class _WindowsUpdater:
                 self._restart_process()
                 callback(err, None)
                 return
+        self._restart_process()
+        callback(None, remote_ver if has_update else None)
+
+    def _do_github(self, callback: Callable[[str | None, str | None], None]) -> None:
+        import json
+        import shutil
+        import tempfile
+        import urllib.request
+        import zipfile
+
+        local_ver = _read_version(_VERSION_FILE)
+
+        try:
+            req = urllib.request.Request(
+                self._GITHUB_API,
+                headers={"User-Agent": "voice-input-updater"},
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                release = json.loads(resp.read())
+        except Exception as exc:
+            logger.warning("GitHub API request failed: %s", exc)
+            self._restart_process()
+            callback(None, None)
+            return
+
+        tag = release.get("tag_name", "")
+        remote_ver = tag.lstrip("v")
+        has_update = _parse_version(remote_ver) > _parse_version(local_ver)
+
+        if has_update:
+            assets = release.get("assets", [])
+            zip_url = next(
+                (a["browser_download_url"] for a in assets if a["name"].endswith(".zip")),
+                None,
+            )
+            if not zip_url:
+                logger.warning("No zip asset in release %s", tag)
+                self._restart_process()
+                callback(f"No zip asset in release {tag}", None)
+                return
+
+            try:
+                with tempfile.TemporaryDirectory() as tmp:
+                    zip_path = Path(tmp) / "update.zip"
+                    req = urllib.request.Request(
+                        zip_url,
+                        headers={"User-Agent": "voice-input-updater"},
+                    )
+                    with urllib.request.urlopen(req, timeout=120) as resp:
+                        zip_path.write_bytes(resp.read())
+                    with zipfile.ZipFile(zip_path) as zf:
+                        zf.extractall(self._repo)
+                venv_pip = self._repo / ".venv" / "Scripts" / "pip.exe"
+                req_file = self._repo / "requirements-windows.txt"
+                subprocess.run(
+                    [str(venv_pip), "install", "-q", "-r", str(req_file)],
+                    check=True, capture_output=True, timeout=120,
+                )
+            except Exception as exc:
+                logger.error("Update failed: %s", exc)
+                self._restart_process()
+                callback(str(exc), None)
+                return
+
         self._restart_process()
         callback(None, remote_ver if has_update else None)
 
