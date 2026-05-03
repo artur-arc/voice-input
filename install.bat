@@ -16,23 +16,27 @@ echo.
 
 :: ── Python check ──────────────────────────────────────────────────────────────
 echo Checking Python...
+set "NEED_PYTHON=1"
 call :find_python
 
 if defined PYTHON (
     call :get_version
     echo  Found Python !PY_VER!
-    if !PY_MAJOR! geq 3 if !PY_MINOR! geq 11 (
-        echo  OK  Python !PY_VER! is compatible - using it.
-        goto :download
-    )
-    echo  Python !PY_VER! is too old ^(need 3.11+^). Installing Python %PYTHON_VER%...
+    if !PY_MAJOR! geq 3 if !PY_MINOR! geq 11 set "NEED_PYTHON="
+)
+
+:: Top-level goto — reliable, no blocks
+if not defined NEED_PYTHON echo  OK  Python !PY_VER! is compatible - using it.
+if not defined NEED_PYTHON goto :download
+
+if defined PYTHON (
+    echo  Python !PY_VER! is too old ^(need 3.11+^). Installing %PYTHON_VER%...
 ) else (
     echo  Python not found. Installing Python %PYTHON_VER%...
 )
-
-:: ── Auto-install Python 3.13 ──────────────────────────────────────────────────
 echo.
 
+:: ── Auto-install Python 3.13 ──────────────────────────────────────────────────
 winget --version >nul 2>&1
 if not errorlevel 1 (
     echo  Trying winget...
@@ -46,7 +50,7 @@ if not errorlevel 1 (
 )
 
 echo  Downloading Python %PYTHON_VER% installer...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest '%PYTHON_URL%' -OutFile '$env:TEMP\python-installer.exe' -UseBasicParsing"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest '%PYTHON_URL%' -OutFile '%TEMP%\python-installer.exe' -UseBasicParsing"
 if errorlevel 1 (
     echo.
     echo  Download failed. Please install Python 3.11+ manually from:
