@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
-- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`e7ce216`](https://github.com/artur-arc/voice-input/commit/e7ce21634686faae45362b5b62657c9a6f1d1f58) Add model loading readiness
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`5dd4849`](https://github.com/artur-arc/voice-input/commit/5dd4849e54f969702707751d8128301d09d6a96b) Add model loading readiness
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`e5b8d8d`](https://github.com/artur-arc/voice-input/commit/e5b8d8ddf4fc94f845794302c65c6c8fac59bf5d) Update installation instructions for Windows and macOS
 
 ## v1.0.18 — 2026-05-03
