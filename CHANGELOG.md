@@ -1,6 +1,10 @@
 # Changelog
 
 All notable changes to voice-input.
+## [unreleased]
+### 2026-05-03
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`0283a32`](https://github.com/artur-arc/voice-input/commit/0283a32567b7804702b15c36a37cb567cb8199ea) Add worker diagnostics, improve 0xC0000005 guidance
+
 ## v1.0.31 — 2026-05-03
 ### 2026-05-03
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`fc6d3d5`](https://github.com/artur-arc/voice-input/commit/fc6d3d57275a5cd710a5b298dbdb18f1c043c23b) Release v1.0.31
