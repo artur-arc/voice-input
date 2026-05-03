@@ -3,6 +3,11 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`7f2ec5e`](https://github.com/artur-arc/voice-input/commit/7f2ec5e5f72bd0ab414f6a7e6f41468541dc37c2) Update installation instructions for Windows and macOS
+
+## v1.0.18 — 2026-05-03
+### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`459c9f9`](https://github.com/artur-arc/voice-input/commit/459c9f9f191fb526f7fc525e2a3873067b68d3be) Release v1.0.18
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`b299a66`](https://github.com/artur-arc/voice-input/commit/b299a66d46f8718039efc9a1bd0e561bad15a3e5) Ensure log file handler flushes after each record
 
 ## v1.0.17 — 2026-05-03

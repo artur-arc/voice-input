@@ -17,19 +17,23 @@ macOS uses mlx-whisper on Apple Silicon (Neural Engine). Windows uses faster-whi
 
 ## Installation
 
-**Everyone downloads the same file:**
-[**Download install.sh**](https://raw.githubusercontent.com/artur-arc/voice-input/main/install.sh)
+### macOS
+
+[**Download install.command**](https://raw.githubusercontent.com/artur-arc/voice-input/main/install.command)
 *(if it opens as text in your browser, right-click the link → Save Link As)*
 
-**macOS** — double-click `install.sh` in Finder. Terminal opens and runs the full setup automatically.
+Double-click `install.command` in Finder. Terminal opens and runs the full setup automatically.
 
-**Windows** — open Git Bash (right-click on Desktop → *Git Bash Here*), then run:
+### Windows
 
-```bash
-bash ~/Downloads/install.sh
-```
+[**Download install.bat**](https://raw.githubusercontent.com/artur-arc/voice-input/main/install.bat)
+*(if it opens as text in your browser, right-click the link → Save Link As)*
 
-The installer detects the platform automatically, downloads the Whisper model (~1.5 GB), registers autostart, and opens permission settings where needed.
+Double-click `install.bat`. The installer detects and installs Python automatically if needed.
+
+---
+
+Both installers download the Whisper model (~1.5 GB), register autostart, and open permission settings where needed.
 
 > After installation the app starts automatically at every login.
 
