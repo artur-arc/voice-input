@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`78f4418`](https://github.com/artur-arc/voice-input/commit/78f4418b79797487a0100b2eaa91e6b0f6ff1d7d) Prioritize cached model for faster-whisper
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`c5680e2`](https://github.com/artur-arc/voice-input/commit/c5680e2c3a1a92fd50ef9f5fff8df7749da9bb0a) Prioritize cached model for faster-whisper
 
 ## v1.0.21 — 2026-05-03
 ### 2026-05-03
