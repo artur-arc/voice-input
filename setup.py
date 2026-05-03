@@ -71,6 +71,12 @@ def install_packages() -> None:
 
 
 def download_model() -> None:
+    env = os.environ.copy()
+    # Suppress symlinks warning (Windows doesn't support them by default)
+    env["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+    # Suppress unauthenticated HF Hub warning
+    env["HF_HUB_DISABLE_IMPLICIT_TOKEN"] = "1"
+
     if IS_MAC:
         cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
         if cache_dir.exists() and any(cache_dir.glob("*whisper-large-v3-mlx*")):
@@ -85,13 +91,14 @@ def download_model() -> None:
         )
     else:
         print("  Downloading faster-whisper large-v3 (~1.5 GB) — this takes a few minutes...")
+        print("  Do not close this window. Progress will appear below:")
         script = (
             "from faster_whisper import WhisperModel; import numpy as np; "
             f"m = WhisperModel('{_WIN_MODEL}', device='cpu', compute_type='int8'); "
             "segs, _ = m.transcribe(np.zeros(16000, dtype='float32'), language='en'); "
             "list(segs); print('  Model ready.')"
         )
-    subprocess.run([str(VENV_PY), "-c", script], check=True)
+    subprocess.run([str(VENV_PY), "-c", script], check=True, env=env)
     ok("Model downloaded and warmed up")
 
 
