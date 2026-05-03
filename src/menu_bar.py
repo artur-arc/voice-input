@@ -56,6 +56,38 @@ def _icon_is_loadable(path: Path) -> bool:
         return False
 
 
+_PERM_URLS: dict[str, str] = {
+    "Microphone": "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone",
+    "Input Monitoring": "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent",
+    "Accessibility": "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
+}
+
+
+def _check_mic() -> bool:
+    try:
+        with sd.InputStream(channels=1, samplerate=16000, blocksize=512):
+            pass
+        return True
+    except Exception:
+        return False
+
+
+def _check_input_monitoring() -> bool:
+    try:
+        from Quartz import CGPreflightListenEventAccess  # type: ignore[import]
+        return bool(CGPreflightListenEventAccess())
+    except Exception:
+        return False
+
+
+def _check_accessibility() -> bool:
+    try:
+        from paste_util import has_accessibility  # noqa: PLC0415
+        return has_accessibility()
+    except Exception:
+        return False
+
+
 def _list_input_devices() -> list[tuple[int, str]]:
     try:
         return [
@@ -222,6 +254,11 @@ class VoiceInputMenuBar(rumps.App):
 
         items.append(None)
 
+        # ── Permissions ───────────────────────────────────────────────────────
+        items.append(self._build_permissions_menu())
+
+        items.append(None)
+
         # ── Version + Restart to Update ───────────────────────────────────────
         ver_item = rumps.MenuItem(f"Version {local_ver}")
         items.append(ver_item)
@@ -260,6 +297,20 @@ class VoiceInputMenuBar(rumps.App):
         )
         if not started:
             self._refresh()
+
+    def _build_permissions_menu(self) -> rumps.MenuItem:
+        checks = {
+            "Microphone": _check_mic(),
+            "Input Monitoring": _check_input_monitoring(),
+            "Accessibility": _check_accessibility(),
+        }
+        parent = rumps.MenuItem("Permissions")
+        for name, granted in checks.items():
+            url = _PERM_URLS[name]
+            item = rumps.MenuItem(name, callback=lambda _, u=url: subprocess.Popen(["open", u]))
+            item.state = 1 if granted else 0
+            parent[name] = item
+        return parent
 
     def _on_uninstall(self, _: rumps.MenuItem) -> None:
         response = rumps.alert(
