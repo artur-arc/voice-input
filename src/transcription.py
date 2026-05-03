@@ -137,8 +137,7 @@ class _MacTranscriber(Transcriber):
         return result["text"].strip() or None
 
 
-_INT8_TIMEOUT = 300   # seconds per compute_type probe in worker subprocess
-_FLOAT32_TIMEOUT = 300
+_PROBE_TIMEOUT = 300  # seconds per compute_type probe in worker subprocess
 
 # Cache file: stores the compute_type that worked last time so future starts skip detection
 _COMPUTE_TYPE_CACHE = Path(__file__).parent.parent / ".ct2_compute_type"
@@ -225,15 +224,15 @@ class _WindowsTranscriber(Transcriber):
                 compute_types = [saved_ct]
                 logger.info("Using saved compute_type=%s (from previous run)", saved_ct)
             else:
-                compute_types = ["int8", "float32"]
+                # float16 first: model is stored as float16 on HuggingFace (~461 MB),
+                # so float16 needs no conversion and uses the least peak memory.
+                compute_types = ["float16", "int8", "float32"]
                 logger.info("First run — will probe compute_types in subprocess")
 
-            timeouts = {"int8": _INT8_TIMEOUT, "float32": _FLOAT32_TIMEOUT}
             for compute_type in compute_types:
-                timeout = timeouts.get(compute_type, _FLOAT32_TIMEOUT)
                 logger.info("Probing compute_type=%s in subprocess (timeout=%ds)...",
-                            compute_type, timeout)
-                proc = self._launch_worker(compute_type, timeout)
+                            compute_type, _PROBE_TIMEOUT)
+                proc = self._launch_worker(compute_type, _PROBE_TIMEOUT)
                 if proc is not None:
                     self._proc = proc
                     logger.info("Worker ready: model=%s compute_type=%s",
@@ -246,14 +245,12 @@ class _WindowsTranscriber(Transcriber):
                     _COMPUTE_TYPE_CACHE.unlink(missing_ok=True)
                     logger.warning("Cleared cached compute_type — will re-probe next run")
                     saved_ct = None
-                    compute_types = ["int8", "float32"]
+                    compute_types = ["float16", "int8", "float32"]
 
             if self._proc is None and not self._load_error:
                 self._load_error = (
-                    "Model failed to load with int8 and float32. "
-                    "Likely cause: stale model cache (ctranslate2 format mismatch). "
-                    "Fix: delete %USERPROFILE%\\.cache\\huggingface\\hub\\models--Systran--faster-whisper-* "
-                    "then re-run setup.py"
+                    "Model failed to load with float16, int8, and float32. "
+                    "Re-run install.bat to re-download the model."
                 )
                 logger.error(self._load_error)
 
