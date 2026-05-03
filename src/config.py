@@ -16,16 +16,26 @@ class ConfigManager:
         self._config_file = config_file
         self._lock = threading.Lock()
         self._mode_index: int = 1
+        self._input_device: str | None = None
         self._watch_thread: threading.Thread | None = None
 
     def load(self) -> None:
         try:
-            vcfg = self._read_raw()
+            raw: dict[str, Any] = json.loads(self._config_file.read_text())
+            vcfg: dict[str, Any] = raw.get("voiceInputConfig", raw)
+
+            new_mode_index = self._mode_index
             for i, m in enumerate(MODES):
                 if vcfg.get(m.key) is True:
-                    with self._lock:
-                        self._mode_index = i
-                    return
+                    new_mode_index = i
+                    break
+
+            # input_device lives at top level (outside voiceInputConfig)
+            new_input_device = raw.get("input_device") if "voiceInputConfig" in raw else None
+
+            with self._lock:
+                self._mode_index = new_mode_index
+                self._input_device = new_input_device
         except Exception:
             logger.exception("Config load error")
 
@@ -49,6 +59,10 @@ class ConfigManager:
         with self._lock:
             return MODES[self._mode_index]
 
+    def input_device(self) -> str | None:
+        with self._lock:
+            return self._input_device
+
     def watch(self, on_change: Callable[[int], None]) -> None:
         if self._watch_thread is not None:
             return
@@ -58,10 +72,6 @@ class ConfigManager:
             daemon=True,
         )
         self._watch_thread.start()
-
-    def _read_raw(self) -> dict[str, Any]:
-        raw: dict[str, Any] = json.loads(self._config_file.read_text())
-        return raw.get("voiceInputConfig", raw)
 
     def _watch_loop(self, on_change: Callable[[int], None]) -> None:
         last_mtime = 0.0

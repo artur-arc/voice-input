@@ -9,9 +9,9 @@ from Quartz import (
     CGEventPost,
     CGEventSetFlags,
     CGEventSourceCreate,
+    kCGAnnotatedSessionEventTap,
     kCGEventFlagMaskCommand,
     kCGEventSourceStateCombinedSessionState,
-    kCGHIDEventTap,
 )
 
 _V_KEYCODE: int = 9
@@ -45,8 +45,8 @@ def paste_text(text: str) -> bool:
         key_down = CGEventCreateKeyboardEvent(source, _V_KEYCODE, True)
         key_up = CGEventCreateKeyboardEvent(source, _V_KEYCODE, False)
         CGEventSetFlags(key_down, kCGEventFlagMaskCommand)
-        CGEventPost(kCGHIDEventTap, key_down)
-        CGEventPost(kCGHIDEventTap, key_up)
+        CGEventPost(kCGAnnotatedSessionEventTap, key_down)
+        CGEventPost(kCGAnnotatedSessionEventTap, key_up)
         return True
     except Exception:
         logger.exception("CGEvent paste failed")

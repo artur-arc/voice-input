@@ -38,7 +38,7 @@ class VoiceInputApp:
 
     def start(self) -> None:
         self._config.load()
-        logger.info("Mic: %s", self._recorder.device_name)
+        self._log_device_info()
         logger.info("Loading %s...", self._transcriber.model_repo)
         self._transcriber.warm_up()
 
@@ -103,9 +103,21 @@ class VoiceInputApp:
         self._feedback.notify("Voice Input", f"Mode: {m.label}")
         self._feedback.play("Tink")
 
+    def _log_device_info(self) -> None:
+        configured = self._config.input_device()
+        if configured:
+            logger.info("Mic (configured): %s", self._recorder.device_name)
+        else:
+            logger.info("Mic (auto): %s", self._recorder.device_name)
+            available = AudioRecorder.list_input_devices()
+            if len(available) > 1:
+                for dev in available:
+                    logger.info("  available: [%d] %s", dev["index"], dev["name"])
+                logger.info('To pin a device set "input_device" in voice-input-config.json')
+
     def _start_recording(self) -> None:
         try:
-            self._recorder.start()
+            self._recorder.start(self._config.input_device())
         except Exception:
             logger.exception("Failed to start recording")
             self._feedback.play("Funk")

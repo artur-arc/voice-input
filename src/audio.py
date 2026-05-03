@@ -16,22 +16,55 @@ class AudioRecorder:
         self._recording: bool = False
         self._chunks: list[np.ndarray] = []
         self._stream: sd.InputStream | None = None
-        self._device, self._device_label = AudioRecorder.pick_input_device()
+        # Initial resolution (no config yet) — used for startup log only.
+        # Re-resolved on every start() call with the live config value.
+        self._device: int | None = None
+        self._device_label: str = "unknown"
+        self._device, self._device_label = AudioRecorder.resolve_device(None)
 
     @staticmethod
-    def pick_input_device() -> tuple[int | None, str]:
+    def list_input_devices() -> list[dict[str, Any]]:
+        """Return all available input devices with index and name."""
         devices = sd.query_devices()
+        return [
+            {"index": i, "name": d["name"]}
+            for i, d in enumerate(devices)
+            if d["max_input_channels"] > 0
+        ]
+
+    @staticmethod
+    def resolve_device(preferred_name: str | None) -> tuple[int | None, str]:
+        """Resolve device index and label.
+
+        Priority:
+          1. preferred_name partial match (user-configured)
+          2. PREFERRED_MICS heuristic (EMEET, USB)
+          3. system default input
+        """
+        devices = sd.query_devices()
+
+        if preferred_name:
+            for i, d in enumerate(devices):
+                if d["max_input_channels"] > 0 and preferred_name.lower() in d["name"].lower():
+                    return i, d["name"]
+            logger.warning("Configured device %r not found — falling back to auto", preferred_name)
+
         for needle in PREFERRED_MICS:
             for i, d in enumerate(devices):
                 if d["max_input_channels"] > 0 and needle.lower() in d["name"].lower():
                     return i, d["name"]
+
         default = sd.query_devices(kind="input")
         return None, default["name"]
 
-    def start(self) -> None:
+    def start(self, preferred_name: str | None = None) -> None:
         with self._lock:
             if self._recording:
                 return
+
+            device_idx, device_label = AudioRecorder.resolve_device(preferred_name)
+            self._device = device_idx
+            self._device_label = device_label
             self._recording = True
             self._chunks = []
             self._stream = None

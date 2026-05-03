@@ -4,5 +4,6 @@
         "russian-russian": true,
         "english-english": false,
         "english-russian": false
-    }
+    },
+    "input_device": null
 }
