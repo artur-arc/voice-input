@@ -64,13 +64,11 @@ class _WindowsFeedback(UserFeedback):
         self._icon = icon
 
     def notify(self, title: str, message: str) -> None:
-        if self._icon is None:
-            logger.warning("Notification skipped (icon not ready): %s", message)
-            return
         try:
-            self._icon.notify(message, title)
+            from plyer import notification  # type: ignore[import]
+            notification.notify(title=title, message=message, app_name="Voice Input", timeout=4)
         except Exception:
-            logger.exception("pystray notification failed")
+            logger.exception("Windows notification failed")
 
     def play(self, sound: str) -> None:
         try:

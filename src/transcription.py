@@ -176,11 +176,13 @@ class _WindowsTranscriber(Transcriber):
 
     def warm_up(self) -> None:
         import os
-        import threading
         # OMP_NUM_THREADS=1 prevents OpenMP thread-pool collisions (Intel MKL vs LLVM OMP on Windows).
-        # CT2_FORCE_CPU_ISA is intentionally NOT set — let ctranslate2 auto-detect AVX2/AVX.
-        # On CPUs with broken AVX2, int8 will time out and we fall back to float32 automatically.
+        # CT2_FORCE_CPU_ISA=GENERIC prevents ctranslate2 from using AVX2/AVX instructions that
+        # cause a native segfault on CPUs with partial or broken AVX2 support. The crash kills
+        # the entire Python process — it cannot be caught by a timeout or try/except.
+        # Must be set before the first ctranslate2 import in this process.
         os.environ.setdefault("OMP_NUM_THREADS", "1")
+        os.environ.setdefault("CT2_FORCE_CPU_ISA", "GENERIC")
         from faster_whisper import WhisperModel  # type: ignore[import]  # lazy — Windows only package
 
         try:
