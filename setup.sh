@@ -109,84 +109,98 @@ fi
 # ── 6. macOS permissions ──────────────────────────────────────────────────────
 step "macOS permissions"
 echo ""
-echo "  Three permissions are required."
-echo "  A System Settings pane will open for each."
-echo "  Find 'python' or 'Terminal' in the list and enable the toggle."
+echo "  macOS will ask for 3 permissions. Click 'Allow' in each dialog."
 echo ""
-read -r -p "  Press Enter to start…"
 
-# Helper: open privacy pane and wait for user confirmation
-request_perm() {
-    local name="$1"
-    local url="$2"
-    local check_cmd="$3"
-    local index="$4"
-
+# Waits in a loop until check_cmd exits 0, printing a dot every second.
+wait_for_perm() {
+    local check_cmd="$1"
+    local max=60
+    local i=0
+    while ! eval "$check_cmd" &>/dev/null 2>&1; do
+        sleep 1
+        i=$((i+1))
+        printf "."
+        if [ "$i" -ge "$max" ]; then
+            echo ""
+            warn "Timed out. Re-run ./setup.sh after granting the permission."
+            return 1
+        fi
+    done
     echo ""
-    echo -e "  ${BOLD}→ $index  $name${NC}"
-
-    if eval "$check_cmd" &>/dev/null 2>&1; then
-        ok "$name already granted"
-        return 0
-    fi
-
-    open "$url"
-    echo "    Enable the toggle for Python/Terminal, then press Enter…"
-    read -r -p "    "
-
-    if eval "$check_cmd" &>/dev/null 2>&1; then
-        ok "$name granted"
-    else
-        warn "$name not detected — you can grant it later and rerun setup."
-    fi
+    return 0
 }
 
-# 6a. Microphone
+# 6a. Microphone — macOS shows native dialog automatically on first access
+echo -e "  ${BOLD}1/3  Microphone${NC}"
+.venv/bin/python - <<'PYEOF' 2>/dev/null || true
+import sounddevice as sd, numpy as np
+try:
+    sd.rec(100, samplerate=16000, channels=1, dtype="float32", blocking=True)
+except Exception:
+    pass
+PYEOF
 MIC_CHECK='.venv/bin/python -c "
 import sounddevice as sd, numpy as np
 sd.rec(100, samplerate=16000, channels=1, dtype=\"float32\", blocking=True)
 "'
-request_perm \
-    "Microphone (recording your voice)" \
-    "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone" \
-    "$MIC_CHECK" \
-    "1/3"
+if eval "$MIC_CHECK" &>/dev/null 2>&1; then
+    ok "Microphone — granted"
+else
+    echo "    Click 'Allow' in the macOS dialog..."
+    wait_for_perm "$MIC_CHECK" && ok "Microphone — granted" || true
+fi
 
-# 6b. Input Monitoring
-IM_CHECK='.venv/bin/python -c "
-from pynput import keyboard
-import threading, time
-done = threading.Event()
-def stop(k): done.set(); return False
-l = keyboard.Listener(on_press=stop)
-l.start()
-done.wait(timeout=0.3)
-l.stop()
-if not done.is_set(): raise RuntimeError(\"no events\")
-"'
-request_perm \
-    "Input Monitoring (detecting hotkey)" \
-    "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent" \
-    "$IM_CHECK" \
-    "2/3"
-
-# 6c. Accessibility
-AX_CHECK='.venv/bin/python -c "
-import sys; sys.path.insert(0,\"src\")
-from paste_util import has_accessibility
-import sys; sys.exit(0 if has_accessibility() else 1)
-"'
-# Trigger the system prompt dialog automatically
+# 6b. Input Monitoring — pynput triggers native dialog on first listener start
+echo ""
+echo -e "  ${BOLD}2/3  Input Monitoring${NC} (hotkey detection)"
 .venv/bin/python - <<'PYEOF' 2>/dev/null || true
-import sys; sys.path.insert(0, "src")
+from pynput import keyboard as kb
+import threading
+done = threading.Event()
+listener = kb.Listener(on_press=lambda k: done.set())
+listener.start()
+done.wait(timeout=0.5)
+listener.stop()
+PYEOF
+IM_CHECK='.venv/bin/python -c "
+from pynput import keyboard as kb
+import threading
+done = threading.Event()
+l = kb.Listener(on_press=lambda k: done.set())
+l.start(); done.wait(timeout=0.3); l.stop()
+if not done.is_set(): raise RuntimeError()
+"'
+if eval "$IM_CHECK" &>/dev/null 2>&1; then
+    ok "Input Monitoring — granted"
+else
+    echo "    Click 'Allow' in the dialog, then press any key..."
+    open "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
+    wait_for_perm "$IM_CHECK" && ok "Input Monitoring — granted" || true
+fi
+
+# 6c. Accessibility — trigger the system prompt dialog
+echo ""
+echo -e "  ${BOLD}3/3  Accessibility${NC} (paste text at cursor)"
+.venv/bin/python - <<'PYEOF' 2>/dev/null || true
 from ApplicationServices import AXIsProcessTrustedWithOptions
 AXIsProcessTrustedWithOptions({"AXTrustedCheckOptionPrompt": True})
 PYEOF
-request_perm \
-    "Accessibility (pasting text at cursor)" \
-    "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility" \
-    "$AX_CHECK" \
-    "3/3"
+AX_CHECK='.venv/bin/python -c "
+import sys; sys.path.insert(0,\"src\")
+from paste_util import has_accessibility
+sys.exit(0 if has_accessibility() else 1)
+"'
+if eval "$AX_CHECK" &>/dev/null 2>&1; then
+    ok "Accessibility — granted"
+else
+    echo "    System Settings opened → find 'Terminal' or 'python' → enable the toggle."
+    open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+    echo "    Press Enter when done..."
+    read -r -p "    "
+    eval "$AX_CHECK" &>/dev/null 2>&1 && ok "Accessibility — granted" \
+        || warn "Accessibility not granted — text will be copied to clipboard only."
+fi
 
 # ── 7. launchd auto-start ─────────────────────────────────────────────────────
 step "Auto-start (launchd)"

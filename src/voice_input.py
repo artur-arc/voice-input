@@ -200,6 +200,8 @@ def _transcribe_and_paste(audio: np.ndarray) -> None:
     m = current_mode()
     try:
         t0 = time.time()
+        # Whisper initial_prompt primes the model for the target language context.
+        # The Russian string is intentional — it improves Russian transcription accuracy.
         initial_prompt = (
             "Привет, давайте обсудим задачу." if m["language"] == "ru" else
             "Let's discuss the task."
