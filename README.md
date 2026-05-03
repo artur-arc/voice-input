@@ -16,8 +16,7 @@ Runs as a background launchd service on Apple Silicon Macs. Uses mlx-whisper wit
 
 ## Installation
 
-**Option A (recommended):** Download `install.command`, then double-click it in Finder. macOS
-opens Terminal and runs the full install automatically. No Terminal knowledge needed.
+**Option A (recommended):** [Download install.command](https://github.com/artur-arc/voice-input/raw/main/install.command), then double-click it in Finder. macOS opens Terminal and runs the full install automatically. No Terminal knowledge needed.
 
 **Option B:**
 
