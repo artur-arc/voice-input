@@ -85,7 +85,7 @@ def _list_input_devices() -> list[tuple[int, str]]:
 
 def _load_icon() -> Any:
     """Load icon.ico as PIL Image, or draw a microphone placeholder if missing."""
-    from PIL import Image, ImageDraw
+    from PIL import Image, ImageDraw  # type: ignore[import]
     if _ICON_FILE.exists():
         try:
             return Image.open(str(_ICON_FILE)).convert("RGBA")
@@ -267,7 +267,7 @@ class VoiceInputTray:
         feedback: UserFeedback,
         repo_dir: Path,
     ) -> None:
-        import pystray
+        import pystray  # type: ignore[import]
         self._pystray = pystray
 
         self._config = config

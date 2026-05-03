@@ -14,7 +14,7 @@ import numpy as np
 from modes import MIN_RECORD_SEC, MODEL_REPO, SAMPLE_RATE, Mode
 
 if TYPE_CHECKING:
-    from faster_whisper import WhisperModel
+    from faster_whisper import WhisperModel  # type: ignore[import]
 
 logger = logging.getLogger(__name__)
 
@@ -133,8 +133,8 @@ class _MacTranscriber(Transcriber):
         return result["text"].strip() or None
 
 
-_INT8_TIMEOUT = 60    # seconds — int8 requires AVX2; fail fast on unsupported CPUs
-_FLOAT32_TIMEOUT = 240  # seconds — float32 is slower but works on any x86_64
+_INT8_TIMEOUT = 30    # seconds — AVX2 CPU loads small model in <20s; broken AVX2 hangs indefinitely
+_FLOAT32_TIMEOUT = 300  # seconds — fallback for CPUs without AVX2; slower but universal
 
 # Cache file: stores the compute_type that worked last time so future starts skip detection
 _COMPUTE_TYPE_CACHE = Path(__file__).parent.parent / ".ct2_compute_type"
@@ -176,11 +176,11 @@ class _WindowsTranscriber(Transcriber):
     def warm_up(self) -> None:
         import os
         import threading
-        # Prevent ctranslate2 ISA misdetection hang (AVX2 on non-AVX2 CPUs).
-        # Prevent OpenMP thread-pool collision (Intel MKL vs LLVM OMP on Windows).
-        os.environ.setdefault("CT2_FORCE_CPU_ISA", "GENERIC")
+        # OMP_NUM_THREADS=1 prevents OpenMP thread-pool collisions (Intel MKL vs LLVM OMP on Windows).
+        # CT2_FORCE_CPU_ISA is intentionally NOT set — let ctranslate2 auto-detect AVX2/AVX.
+        # On CPUs with broken AVX2, int8 will time out and we fall back to float32 automatically.
         os.environ.setdefault("OMP_NUM_THREADS", "1")
-        from faster_whisper import WhisperModel  # lazy — Windows only package
+        from faster_whisper import WhisperModel  # type: ignore[import]  # lazy — Windows only package
 
         try:
             cache_dir = Path.home() / ".cache" / "huggingface" / "hub"

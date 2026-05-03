@@ -3,7 +3,8 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
-- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`ca96057`](https://github.com/artur-arc/voice-input/commit/ca9605719050d53649eff18bc22f2112f3a822c5) Restrict Python version to 3.11-3.12 for compatibility
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`85dc525`](https://github.com/artur-arc/voice-input/commit/85dc525dd124ab42cb56e1613e02aa409f3ea29e) Update Windows paste implementation to use
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`8ed4d4a`](https://github.com/artur-arc/voice-input/commit/8ed4d4adfc10cd73c2cff10500bccd138f0e70cf) Restrict Python version to 3.11-3.12 for compatibility
 
 ## v1.0.26 — 2026-05-03
 ### 2026-05-03
