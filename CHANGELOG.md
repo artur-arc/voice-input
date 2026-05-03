@@ -3,6 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`c10aa35`](https://github.com/artur-arc/voice-input/commit/c10aa35b860d16065db675368aa493070c72535e) Set CT2_FORCE_CPU_ISA=GENERIC before ctranslate2 import
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`8800fac`](https://github.com/artur-arc/voice-input/commit/8800fac230f62d9df112cf5a3857745649e05b68) Reduce int8 timeout to 60s, add sound on model ready
 
 ## v1.0.24 — 2026-05-03
