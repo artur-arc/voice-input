@@ -283,4 +283,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import traceback
+    try:
+        main()
+    except Exception:
+        err = traceback.format_exc()
+        print(err, file=sys.stderr)
+        try:
+            (REPO_DIR / "install.log").write_text(err, encoding="utf-8")
+        except Exception:
+            pass
+        sys.exit(1)

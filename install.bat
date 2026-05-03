@@ -105,8 +105,13 @@ if %PS_ERR% neq 0 (
 echo.
 echo Setting up...
 cd /d "%INSTALL_DIR%"
-!PYTHON! setup.py
-if errorlevel 1 goto :error
+!PYTHON! -u setup.py
+if errorlevel 1 (
+    echo.
+    echo  Error details saved to:
+    echo    %INSTALL_DIR%\install.log
+    goto :error
+)
 goto :end
 
 :: ── Helpers ───────────────────────────────────────────────────────────────────
@@ -138,3 +143,6 @@ pause
 exit /b 1
 
 :end
+echo.
+echo  Done! Press any key to close.
+pause >nul
