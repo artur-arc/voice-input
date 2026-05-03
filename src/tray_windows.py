@@ -471,7 +471,7 @@ class VoiceInputTray:
 
 def main() -> None:
     log_file = _REPO_DIR / "tray_windows.log"
-    setup_logging(log_file if sys.stdout.isatty() else None)
+    setup_logging(log_file)  # pythonw.exe has no stdout — always log to file
     logger.info("Windows tray starting (version %s)", _read_version(_VERSION_FILE))
     config = ConfigManager(_CONFIG_FILE)
     VoiceInputTray(

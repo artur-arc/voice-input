@@ -3,6 +3,11 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`814a632`](https://github.com/artur-arc/voice-input/commit/814a632e800d899739f55a4a0b5de823b2ec648d) Ensure logging works on Windows
+
+## v1.0.13 — 2026-05-03
+### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`5c8268d`](https://github.com/artur-arc/voice-input/commit/5c8268d52b2a08d09d85e6231d2a945b107f9cd2) Release v1.0.13
 - ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`543d181`](https://github.com/artur-arc/voice-input/commit/543d1815431d96c433f7e7ed2ab5d44c703ba99a) Handle exceptions and log errors during
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`3157580`](https://github.com/artur-arc/voice-input/commit/3157580649a4ab7312ca976784edddc456381306) Simplify package installation logic
 
