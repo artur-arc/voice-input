@@ -228,6 +228,7 @@ class VoiceInputMenuBar(rumps.App):
         items.append(rumps.MenuItem("Restart to Update", callback=self._on_restart_update))
 
         items.append(None)
+        items.append(rumps.MenuItem("Uninstall…", callback=self._on_uninstall))
         items.append(rumps.MenuItem("Quit", callback=rumps.quit_application))
 
         self.menu.clear()
@@ -259,6 +260,33 @@ class VoiceInputMenuBar(rumps.App):
         )
         if not started:
             self._refresh()
+
+    def _on_uninstall(self, _: rumps.MenuItem) -> None:
+        response = rumps.alert(
+            title="Uninstall Voice Input?",
+            message=(
+                "This will stop the service, remove it from login items, "
+                f"and delete {self._repo_dir}."
+            ),
+            ok="Uninstall",
+            cancel="Cancel",
+        )
+        if response != 1:
+            return
+        try:
+            subprocess.run(
+                ["bash", str(self._repo_dir / "install_launchd.sh"), "uninstall"],
+                check=True, timeout=15,
+            )
+        except Exception as exc:
+            rumps.alert(title="Uninstall failed", message=str(exc), ok="OK")
+            return
+        # Schedule folder deletion after this process exits (can't delete our own cwd)
+        subprocess.Popen(
+            ["bash", "-c", f'sleep 2 && rm -rf "{self._repo_dir}"'],
+            start_new_session=True,
+        )
+        rumps.quit_application()
 
     def _on_restart_done(self, error: str | None, new_ver: str | None) -> None:
         if error:
