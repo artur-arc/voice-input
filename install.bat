@@ -73,9 +73,16 @@ if not defined PYTHON (
 :download
 if exist "%~dp0setup.py" (
     echo.
-    echo  Found local files — copying to %INSTALL_DIR%...
-    if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
-    xcopy /E /Y /I /Q "%~dp0." "%INSTALL_DIR%\" >nul
+    :: Normalize both paths before comparing to avoid self-copy
+    for %%A in ("%~dp0.") do set "SRC=%%~fA"
+    for %%A in ("%INSTALL_DIR%") do set "DST=%%~fA"
+    if /i "!SRC!" == "!DST!" (
+        echo  Already in install directory — skipping copy.
+    ) else (
+        echo  Found local files — copying to %INSTALL_DIR%...
+        if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
+        xcopy /E /Y /I /Q "!SRC!\" "%INSTALL_DIR%\" >nul
+    )
     goto :run_setup
 )
 

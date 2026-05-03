@@ -136,6 +136,7 @@ class _WindowsTranscriber(Transcriber):
         self._model_name = _detect_win_model()
         self._model: WhisperModel | None = None
         self._ready = threading.Event()
+        self._load_error: str | None = None
         logger.info("Windows model selected: %s", self._model_name)
 
     @property
@@ -144,21 +145,30 @@ class _WindowsTranscriber(Transcriber):
 
     def warm_up(self) -> None:
         from faster_whisper import WhisperModel  # lazy — Windows only package
-        self._model = WhisperModel(self._model_name, device="cpu", compute_type="int8")
-        logger.info("Model loaded: %s", self._model_name)
-        self._ready.set()
+        try:
+            self._model = WhisperModel(self._model_name, device="cpu", compute_type="int8")
+            logger.info("Model loaded: %s", self._model_name)
+        except Exception as exc:
+            self._load_error = str(exc)
+            logger.exception("Model load failed: %s", exc)
+        finally:
+            # Always set the event so transcribe() never deadlocks waiting forever
+            self._ready.set()
 
     def transcribe(self, audio: np.ndarray, mode: Mode) -> str | None:
         if len(audio) < SAMPLE_RATE * MIN_RECORD_SEC:
             return None
         if not self._ready.is_set():
             logger.info("Waiting for model to load...")
-            self._ready.wait()
+            self._ready.wait(timeout=120)
+        if self._model is None:
+            logger.error("Model unavailable (load error: %s)", self._load_error)
+            return None
         kwargs: dict[str, Any] = {
             "language": mode.language,
             "initial_prompt": self._initial_prompt(mode.language),
         }
         if mode.task == "translate":
             kwargs["task"] = "translate"
-        segments, _ = self._model.transcribe(audio, **kwargs)  # type: ignore[union-attr]
+        segments, _ = self._model.transcribe(audio, **kwargs)
         return " ".join(s.text for s in segments).strip() or None

@@ -3,6 +3,11 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`4e721f2`](https://github.com/artur-arc/voice-input/commit/4e721f2dbad5901dc6eed5b530bcd37673891906) Ensure unique download script file for parallel installs
+
+## v1.0.22 — 2026-05-03
+### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`134d0e9`](https://github.com/artur-arc/voice-input/commit/134d0e9a1147c37406a85dbe6272a7e9528ae138) Release v1.0.22
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`c5680e2`](https://github.com/artur-arc/voice-input/commit/c5680e2c3a1a92fd50ef9f5fff8df7749da9bb0a) Prioritize cached model for faster-whisper
 
 ## v1.0.21 — 2026-05-03

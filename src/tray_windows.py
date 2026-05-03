@@ -222,6 +222,11 @@ class _WindowsUpdater:
                     with urllib.request.urlopen(req, timeout=120) as resp:
                         zip_path.write_bytes(resp.read())
                     with zipfile.ZipFile(zip_path) as zf:
+                        repo_resolved = self._repo.resolve()
+                        for member in zf.namelist():
+                            dest = (self._repo / member).resolve()
+                            if not str(dest).startswith(str(repo_resolved)):
+                                raise ValueError(f"Zip path traversal blocked: {member}")
                         zf.extractall(self._repo)
                 venv_pip = self._repo / ".venv" / "Scripts" / "pip.exe"
                 req_file = self._repo / "requirements-windows.txt"
@@ -240,11 +245,15 @@ class _WindowsUpdater:
 
     def _restart_process(self) -> None:
         try:
-            subprocess.Popen([sys.executable] + sys.argv, close_fds=True)
+            # DETACHED_PROCESS: new process is independent of this one on Windows.
+            # close_fds=True raises ValueError in pythonw.exe (no console handles).
+            subprocess.Popen(
+                [sys.executable] + sys.argv,
+                creationflags=subprocess.DETACHED_PROCESS,
+            )
         except Exception as exc:
             logger.warning("Process restart failed: %s", exc)
-        finally:
-            os._exit(0)  # os._exit kills the process from a daemon thread; sys.exit does not
+        os._exit(0)  # os._exit from a daemon thread; sys.exit does not propagate
 
 
 class VoiceInputTray:

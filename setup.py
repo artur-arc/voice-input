@@ -9,6 +9,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 REPO_DIR = Path(__file__).parent
@@ -159,7 +160,10 @@ def download_model() -> None:
         # Download-only script: patch tqdm for visible progress, then trigger HF download.
         # We do NOT call WhisperModel() here — ctranslate2 crashes (exit 3221225477)
         # on some AMD/Intel CPUs during model init. The actual load happens at first use.
-        dl = REPO_DIR / "_dl.py"
+        # Use a unique temp file to avoid collisions if two installs run in parallel.
+        fd, dl_path = tempfile.mkstemp(suffix=".py", prefix="_vi_dl_")
+        os.close(fd)
+        dl = Path(dl_path)
         dl.write_text(
             "import sys, tqdm\n"
             "try:\n"
@@ -224,9 +228,9 @@ def _create_win_launcher() -> Path:
     launcher = REPO_DIR / "run-windows.bat"
     launcher.write_text(
         "@echo off\r\n"
-        f'cd /d "{REPO_DIR}"\r\n'
+        'cd /d "%~dp0"\r\n'  # relative to the bat file — survives folder moves
         "if not exist .venv\\Scripts\\pythonw.exe (\r\n"
-        "    echo venv not found, run install.command\r\n"
+        "    echo venv not found, run install.bat\r\n"
         "    pause & exit /b 1\r\n"
         ")\r\n"
         'start /b "" .venv\\Scripts\\pythonw.exe src\\main.py\r\n',
@@ -287,7 +291,7 @@ def launch_tray() -> None:
         return
     subprocess.Popen(
         [str(VENV_PYW), str(REPO_DIR / "src" / "main.py")],
-        close_fds=True,
+        creationflags=subprocess.DETACHED_PROCESS,
     )
     ok("Voice Input launched in system tray")
 

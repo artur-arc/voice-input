@@ -19,10 +19,13 @@ macOS uses mlx-whisper on Apple Silicon (Neural Engine). Windows uses faster-whi
 
 ### macOS
 
-[**Download install.command**](https://raw.githubusercontent.com/artur-arc/voice-input/main/install.command)
-*(if it opens as text in your browser, right-click the link → Save Link As)*
+Open **Terminal** (press <kbd>⌘</kbd><kbd>Space</kbd>, type `Terminal`, press Enter) and run:
 
-Double-click `install.command` in Finder. Terminal opens and runs the full setup automatically.
+```bash
+curl -fsSL https://raw.githubusercontent.com/artur-arc/voice-input/main/install.command | bash
+```
+
+This is the recommended method — no Gatekeeper warnings, no extra steps.
 
 ### Windows
 
