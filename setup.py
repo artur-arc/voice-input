@@ -315,6 +315,13 @@ def launch_tray() -> None:
     """Windows only: start tray app (macOS relies on launchd)."""
     if not IS_WINDOWS:
         return
+    # Kill any existing tray instance so the fresh one can acquire the mutex.
+    # (setup.py may run while the app is already running — e.g. after a model re-download)
+    subprocess.run(
+        ["taskkill", "/f", "/im", "pythonw.exe"],
+        capture_output=True,
+    )
+    import time as _time; _time.sleep(1)
     subprocess.Popen(
         [str(VENV_PYW), str(REPO_DIR / "src" / "main.py")],
         creationflags=subprocess.DETACHED_PROCESS,
