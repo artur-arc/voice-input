@@ -70,7 +70,8 @@ def install_packages() -> None:
         [str(VENV_PY), "-m", "pip", "install", "--quiet", "--upgrade", "pip"],
         check=True,
     )
-    print("  Installing packages (ctranslate2 is ~150 MB — please wait)...")
+    label = "ctranslate2 is ~150 MB" if IS_WINDOWS else "mlx-whisper is ~300 MB"
+    print(f"  Installing packages ({label} — please wait)...")
     subprocess.run(
         [str(VENV_PY), "-m", "pip", "install", "--progress-bar", "on", "-r", str(REQUIREMENTS)],
         check=True,
