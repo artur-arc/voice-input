@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
-- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`246d045`](https://github.com/artur-arc/voice-input/commit/246d0452f2a88ae7ad52c99cde576e1727120d79) Suppress HF Hub warnings during model download
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`e463240`](https://github.com/artur-arc/voice-input/commit/e4632403906a7907010883dbb032dd84f5865631) Suppress HF Hub warnings during model download
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`432fc73`](https://github.com/artur-arc/voice-input/commit/432fc737b077cf154262de7589f70b58e8655fc4) Bump Python version to 3.13.3
 
 ## v1.0.7 — 2026-05-03
