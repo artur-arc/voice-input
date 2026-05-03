@@ -3,6 +3,11 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`125c407`](https://github.com/artur-arc/voice-input/commit/125c407a40918d546499919aebae88ead300b0cc) Validate model.bin size to prevent ctranslate2
+
+## v1.0.30 — 2026-05-03
+### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`839041e`](https://github.com/artur-arc/voice-input/commit/839041e1e761f06ab86b393ce8d3800dcb5abbcc) Release v1.0.30
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`22ce7f9`](https://github.com/artur-arc/voice-input/commit/22ce7f9b0af214c3ad01c2bb4a9421b9516da857) Isolate ctranslate2 in subprocess to prevent
 
 ## v1.0.29 — 2026-05-03

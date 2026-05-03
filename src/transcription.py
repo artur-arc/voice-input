@@ -198,6 +198,28 @@ class _WindowsTranscriber(Transcriber):
                 logger.error(self._load_error)
                 return
 
+            # Validate model.bin — ctranslate2 crashes with 0xC0000005 on corrupted files.
+            _EXPECTED_MIN_MB = {"small": 200, "medium": 400, "large-v3": 1400}
+            model_bins = sorted(model_dir.glob("**/model.bin"))
+            if not model_bins:
+                self._load_error = (
+                    f"model.bin not found inside {model_dir}. "
+                    "Files may be incomplete — delete the directory and re-run setup.py."
+                )
+                logger.error(self._load_error)
+                return
+            model_bin_mb = model_bins[0].stat().st_size / 1_048_576
+            min_mb = _EXPECTED_MIN_MB.get(self._model_name, 100)
+            logger.info("model.bin: %.1f MB (expected >= %d MB)", model_bin_mb, min_mb)
+            if model_bin_mb < min_mb:
+                self._load_error = (
+                    f"model.bin is {model_bin_mb:.1f} MB — expected >= {min_mb} MB. "
+                    f"Files are corrupted or incomplete. "
+                    f"Delete {model_dir} and re-run setup.py to re-download."
+                )
+                logger.error(self._load_error)
+                return
+
             saved_ct = _read_cached_compute_type()
             if saved_ct:
                 compute_types = [saved_ct]
