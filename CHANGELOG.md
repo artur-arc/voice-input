@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
-- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`9841fa1`](https://github.com/artur-arc/voice-input/commit/9841fa141ab3c2bc3caf68a949a8259660f52165) Skip voice input download if setup.py exists
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`3d3661b`](https://github.com/artur-arc/voice-input/commit/3d3661b12faf3ca32407543733f1aeaac49d6ebf) Skip voice input download if setup.py exists
 
 ## v1.0.20 — 2026-05-03
 ### 2026-05-03
