@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`1ffdf43`](https://github.com/artur-arc/voice-input/commit/1ffdf434814ef1af2cac94996b011223e6871188) Remove redundant tray instance killing in setup.py
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`ccf2f29`](https://github.com/artur-arc/voice-input/commit/ccf2f295d7c6022857897b8d7097af7a0a6841d7) Remove redundant tray instance killing in setup.py
 
 ## v1.0.40 — 2026-05-03
 ### 2026-05-03
