@@ -13,12 +13,15 @@ class _FlushingRotatingFileHandler(RotatingFileHandler):
 
 
 def setup_logging(log_file: Path | None = None) -> None:
+    root = logging.getLogger()
+    if root.handlers:
+        return
+
     fmt = logging.Formatter(
         fmt="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    root = logging.getLogger()
     root.setLevel(logging.INFO)
 
     # Silence noisy third-party loggers that flood the log with HTTP 200 lines
