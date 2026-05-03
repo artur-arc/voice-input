@@ -16,7 +16,7 @@ Runs as a background launchd service on Apple Silicon Macs. Uses mlx-whisper wit
 
 ## Installation
 
-**Option A (recommended):** [Download install.command](https://github.com/artur-arc/voice-input/raw/main/install.command), then double-click it in Finder. macOS opens Terminal and runs the full install automatically. No Terminal knowledge needed.
+**Option A (recommended):** [Download install.command](https://raw.githubusercontent.com/artur-arc/voice-input/main/install.command), then double-click it in Finder. macOS opens Terminal and runs the full install automatically. No Terminal knowledge needed. *(If the file opens as text in your browser, right-click the link → Save Link As)*
 
 **Option B:**
 
@@ -119,7 +119,7 @@ possible with this model.
 
 Click the menu bar icon and select any listed device. The choice takes effect on the next recording. `Auto-select` prefers any EMEET or USB device and falls back to the system default.
 
-As an alternative, [download select_mic.command](https://github.com/artur-arc/voice-input/raw/main/select_mic.command) and double-click it in Finder. Terminal lists available microphones and lets you pick one interactively. The selection is saved to `voice-input-config.json`.
+As an alternative, [download select_mic.command](https://raw.githubusercontent.com/artur-arc/voice-input/main/select_mic.command) *(if it opens as text in your browser, right-click the link → Save Link As)* and double-click it in Finder. Terminal lists available microphones and lets you pick one interactively. The selection is saved to `voice-input-config.json`.
 
 ## Configuration
 
