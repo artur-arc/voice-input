@@ -346,13 +346,13 @@ class VoiceInputMenuBar(rumps.App):
 
     def _on_restart_done(self, error: str | None, new_ver: str | None) -> None:
         if error:
-            rumps.notification("Voice Input", "Update failed", error)
+            logger.error("Restart/update failed: %s", error)
             self._refresh()
         elif new_ver:
-            rumps.notification("Voice Input", "", f"Updated to v{new_ver} — restarting menu bar")
+            logger.info("Updated to v%s — restarting menu bar", new_ver)
             rumps.quit_application()  # launchd KeepAlive restarts us with new code
         else:
-            rumps.notification("Voice Input", "", "Service restarted")
+            logger.info("Service restarted")
             self._refresh()
 
 
