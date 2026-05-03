@@ -1,69 +1,91 @@
 # voice-input
 
-A background tool for macOS: hold right Cmd, speak, release — the text gets inserted into the active application.
+Hold Right Cmd, speak, release — the transcribed text gets pasted into whatever app is focused.
 
-## How it works
+Runs as a background launchd service on Apple Silicon Macs. Uses mlx-whisper with the
+`whisper-large-v3-mlx` model, which runs entirely on the Neural Engine.
 
-| Action | What happens |
-|---|---|
-| Hold right Cmd → speak → release | Records, transcribes/translates, and pastes text |
-| Right Option | Cycles through language modes |
+## Requirements
 
-Sounds: Tink on recording start, Pop on success, Funk on error. A macOS notification appears when the mode changes and on startup.
+- Apple Silicon Mac (arm64 only — mlx-whisper does not run on Intel)
+- macOS 12+
+- Python 3.11+ (`setup.sh` installs it via Homebrew if missing)
+- ~2 GB of disk space for the model and virtual environment
+- Three macOS permissions: Microphone, Input Monitoring, Accessibility
 
 ## Installation
-
-One command does everything:
 
 ```bash
 git clone https://github.com/artur-arc/voice-input && cd voice-input && ./setup.sh
 ```
 
-`setup.sh` installs Homebrew and Python 3.9+ if missing, creates a virtual environment, installs dependencies, and registers a launchd agent to start automatically on login.
+`setup.sh` handles everything in order: checks that you are on Apple Silicon, installs Homebrew
+and Python 3.11+ if missing, creates a virtual environment, installs Python packages, downloads
+the Whisper model (~1.5 GB), walks through three permission prompts, and registers a launchd
+agent so the service starts automatically at login.
 
-During installation, three System Settings panels will open automatically — grant the following permissions:
+When the permission prompts appear, find `python` or `Terminal` in each System Settings pane
+and enable the toggle.
 
-1. Microphone
-2. Input Monitoring
-3. Accessibility
+## Hotkeys
 
-The Whisper model (~1.5 GB) downloads on first run. About 2 GB of disk space required in total.
+| Key | Action |
+|---|---|
+| Right Cmd (hold → release) | Record audio, transcribe, paste into the active app |
+| Right Option | Cycle through language modes |
 
-Requirements: macOS 12+, Python 3.9+ (setup.sh installs it automatically).
+Audio feedback: Tink on recording start, Pop on success, Funk on error.
+A macOS notification appears on mode change and at startup.
 
 ## Language modes
 
-Right Option cycles through modes in order:
+Right Option cycles through the three modes in order:
 
-| Mode | What it does |
-|---|---|
-| `ru→en` | Russian speech → English text (translation) |
-| `ru→ru` | Russian speech → Russian text (transcription) |
-| `en→en` | English speech → English text (transcription) |
+| Mode | Config key | What it does |
+|---|---|---|
+| `ru→en` | `russian-english` | Russian speech → English text (translation) |
+| `ru→ru` | `russian-russian` | Russian speech → Russian text (transcription) |
+| `en→en` | `english-russian` | English speech → English text (transcription) |
 
-The current mode persists across restarts in [voice-input-config.json](voice-input-config.json). You can change it in two ways:
+## Configuration
 
-- **At runtime** — press Right Option; the app cycles through modes and updates the file automatically.
-- **Manually** — open [voice-input-config.json](voice-input-config.json) and set exactly one key to `true`, the rest to `false`:
+The active mode is stored in `voice-input-config.json`. The file is watched live — edits take
+effect within two seconds without a restart.
+
+To change the mode manually, set exactly one key to `true` and the rest to `false`:
 
 ```json
 {
-    "russian-english": false,
-    "russian-russian": true,
-    "english-russian": false
+    "voiceInputConfig": {
+        "russian-english": false,
+        "russian-russian": true,
+        "english-russian": false,
+        "english-english": false
+    }
 }
 ```
 
-## Background service
+Pressing Right Option at runtime has the same effect and updates the file automatically.
+
+## Service management
 
 ```bash
 ./install_launchd.sh            # install and start
-./install_launchd.sh stop       # stop (will start again on next login)
+./install_launchd.sh stop       # stop (restarts at next login)
 ./install_launchd.sh uninstall  # remove permanently
 ```
 
-## Logs
+## Logs and troubleshooting
 
 ```bash
 tail -f voice_input.log
 ```
+
+Common problems:
+
+- Accessibility not granted: text is copied to the clipboard but Cmd+V is not simulated.
+  The log prints `(text in clipboard — grant Accessibility to enable auto-paste)`.
+  Fix: System Settings → Privacy & Security → Accessibility, add Python.
+- Input Monitoring not granted: hotkeys are not detected. Fix: System Settings →
+  Privacy & Security → Input Monitoring, add Python.
+- Microphone not granted: recording fails with a mic error in the log.
