@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
-- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`a2ee6e3`](https://github.com/artur-arc/voice-input/commit/a2ee6e3e09a6e6f5250e29d96266f0605c8b7db8) Update Russian translation settings
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`8b80088`](https://github.com/artur-arc/voice-input/commit/8b80088e7f6ab1b950678c69c10cadc9c00c1f77) Update Russian translation settings
 
 ## v1.0.6 — 2026-05-03
 ### 2026-05-03
