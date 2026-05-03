@@ -17,7 +17,38 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_WIN_MODEL: str = "large-v3"
+
+def _detect_win_model() -> str:
+    """Choose faster-whisper model based on total physical RAM (no extra dependencies)."""
+    import ctypes
+
+    class _MemStatus(ctypes.Structure):
+        _fields_ = [
+            ("dwLength",                ctypes.c_ulong),
+            ("dwMemoryLoad",            ctypes.c_ulong),
+            ("ullTotalPhys",            ctypes.c_ulonglong),
+            ("ullAvailPhys",            ctypes.c_ulonglong),
+            ("ullTotalPageFile",        ctypes.c_ulonglong),
+            ("ullAvailPageFile",        ctypes.c_ulonglong),
+            ("ullTotalVirtual",         ctypes.c_ulonglong),
+            ("ullAvailVirtual",         ctypes.c_ulonglong),
+            ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+        ]
+
+    try:
+        mem = _MemStatus()
+        mem.dwLength = ctypes.sizeof(mem)
+        ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(mem))  # type: ignore[attr-defined]
+        total_gb = mem.ullTotalPhys / (1024 ** 3)
+    except Exception:
+        total_gb = 0.0
+
+    if total_gb >= 16:
+        return "large-v3"
+    elif total_gb >= 8:
+        return "medium"
+    else:
+        return "small"
 
 
 class Transcriber(ABC):
@@ -98,9 +129,10 @@ class _WindowsTranscriber(Transcriber):
 
     def __init__(self, model_repo: str = MODEL_REPO) -> None:
         import threading
-        self._model_name = _WIN_MODEL  # mlx model path is not valid on Windows
+        self._model_name = _detect_win_model()
         self._model: WhisperModel | None = None
         self._ready = threading.Event()
+        logger.info("Windows model selected: %s", self._model_name)
 
     @property
     def model_repo(self) -> str:

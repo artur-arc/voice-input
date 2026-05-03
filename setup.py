@@ -28,7 +28,40 @@ else:
     REQUIREMENTS = REPO_DIR / "requirements.txt"
 
 _MAC_MODEL  = "mlx-community/whisper-large-v3-mlx"
-_WIN_MODEL  = "large-v3"
+_WIN_MODEL  = "large-v3"  # overridden at runtime by _detect_win_model()
+
+
+def _detect_win_model() -> str:
+    """Choose faster-whisper model based on total physical RAM (no extra dependencies)."""
+    import ctypes
+
+    class _MemStatus(ctypes.Structure):
+        _fields_ = [
+            ("dwLength",                ctypes.c_ulong),
+            ("dwMemoryLoad",            ctypes.c_ulong),
+            ("ullTotalPhys",            ctypes.c_ulonglong),
+            ("ullAvailPhys",            ctypes.c_ulonglong),
+            ("ullTotalPageFile",        ctypes.c_ulonglong),
+            ("ullAvailPageFile",        ctypes.c_ulonglong),
+            ("ullTotalVirtual",         ctypes.c_ulonglong),
+            ("ullAvailVirtual",         ctypes.c_ulonglong),
+            ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+        ]
+
+    try:
+        mem = _MemStatus()
+        mem.dwLength = ctypes.sizeof(mem)
+        ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(mem))  # type: ignore[attr-defined]
+        total_gb = mem.ullTotalPhys / (1024 ** 3)
+    except Exception:
+        total_gb = 0.0
+
+    if total_gb >= 16:
+        return "large-v3"   # ~1.5 GB model, 30–60 s on CPU
+    elif total_gb >= 8:
+        return "medium"     # ~470 MB model, 5–15 s on CPU
+    else:
+        return "small"      # ~150 MB model, 2–5 s on CPU
 
 GREEN = "\033[0;32m"
 BOLD  = "\033[1m"
@@ -99,11 +132,15 @@ def download_model() -> None:
         )
         subprocess.run([str(VENV_PY), "-c", script], check=True, env=env)
     else:
+        model = _detect_win_model()
+        sizes = {"large-v3": "~1.5 GB", "medium": "~470 MB", "small": "~150 MB"}
+        cache_glob = f"*faster-whisper-{model}*"
         cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
-        if cache_dir.exists() and any(cache_dir.glob("*faster-whisper-large-v3*")):
-            ok("Model already cached")
+        if cache_dir.exists() and any(cache_dir.glob(cache_glob)):
+            ok(f"Model already cached ({model})")
             return
-        print("  Downloading faster-whisper large-v3 (~1.5 GB) — this takes a few minutes...")
+        print(f"  Selected model: {model} ({sizes.get(model, '?')}) based on available RAM")
+        print(f"  Downloading — this takes a few minutes...")
         # Write a script file: tqdm must be patched before faster_whisper is imported
         # so that huggingface_hub picks up our subclass (which forces disable=False).
         dl = REPO_DIR / "_dl.py"
@@ -129,7 +166,7 @@ def download_model() -> None:
             "    pass\n"
             "\n"
             "from faster_whisper import WhisperModel\n"
-            f"WhisperModel('{_WIN_MODEL}', device='cpu', compute_type='int8')\n"
+            f"WhisperModel('{model}', device='cpu', compute_type='int8')\n"
             "print('  Model ready.', flush=True)\n",
             encoding="utf-8",
         )
@@ -247,7 +284,8 @@ def print_summary() -> None:
         print("  To stop:    ./install_launchd.sh stop")
         print("  To remove:  ./install_launchd.sh uninstall")
     else:
-        ok("Whisper large-v3 (CPU, faster-whisper)")
+        model = _detect_win_model()
+        ok(f"Whisper {model} (CPU, faster-whisper)")
         ok("Startup folder autostart")
         print()
         print("  Look for the microphone icon in the system tray (bottom-right).")

@@ -3,6 +3,11 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`68fe52f`](https://github.com/artur-arc/voice-input/commit/68fe52fcc8bbfd56825692c1db9d4324c3bee5cb) Detect model based on RAM
+
+## v1.0.19 — 2026-05-03
+### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`f229002`](https://github.com/artur-arc/voice-input/commit/f229002942c6141c6968b5977c91af7141a2816c) Release v1.0.19
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`5dd4849`](https://github.com/artur-arc/voice-input/commit/5dd4849e54f969702707751d8128301d09d6a96b) Add model loading readiness
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`e5b8d8d`](https://github.com/artur-arc/voice-input/commit/e5b8d8ddf4fc94f845794302c65c6c8fac59bf5d) Update installation instructions for Windows and macOS
 
