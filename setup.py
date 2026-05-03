@@ -58,12 +58,12 @@ def create_venv() -> None:
 
 
 def install_packages() -> None:
-    probe = (
-        "import ctranslate2, faster_whisper, sounddevice, pynput, pystray, PIL"
-        if IS_WINDOWS else
-        "import mlx_whisper, sounddevice, pynput, rumps"
+    key_pkg = "faster-whisper" if IS_WINDOWS else "mlx-whisper"
+    r = subprocess.run(
+        [str(VENV_PY), "-m", "pip", "show", key_pkg],
+        capture_output=True,
     )
-    if subprocess.run([str(VENV_PY), "-c", probe], capture_output=True).returncode == 0:
+    if r.returncode == 0:
         ok("Packages already installed")
         return
     subprocess.run(
