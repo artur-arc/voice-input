@@ -36,6 +36,8 @@ and enable the toggle.
 
 ## Permissions
 
+All three permissions must be granted to **python3** — the binary at `~/voice-input/.venv/bin/python3`. This is the process that runs the voice input service. Terminal only appears in the permission lists if you ran the installer manually; the launchd service itself runs as Python.
+
 The installer requests three macOS permissions automatically. If a dialog was missed or a
 permission was revoked, grant it manually:
 
@@ -94,6 +96,7 @@ A microphone icon sits in the macOS status bar. Click it for a dropdown menu:
 |---|---|
 | `ru→en` / `ru→ru` / `en→en` | Language mode — radio checkmarks, one active at a time |
 | `Auto-select` / device names | Microphone — radio checkmarks, one active at a time |
+| `Permissions` | Shows grant status for Microphone, Input Monitoring, and Accessibility; click any item to open the relevant System Settings panel |
 | `Version 1.0.0` | Current version (informational) |
 | `Restart to Update` | Checks GitHub for a new version; pulls and restarts automatically if found |
 | `Quit` | Stop the service |

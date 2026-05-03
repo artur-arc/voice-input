@@ -65,9 +65,9 @@ _PERM_URLS: dict[str, str] = {
 
 def _check_mic() -> bool:
     try:
-        with sd.InputStream(channels=1, samplerate=16000, blocksize=512):
-            pass
-        return True
+        from AVFoundation import AVCaptureDevice, AVMediaTypeAudio  # type: ignore[import]
+        # 0=NotDetermined, 1=Restricted, 2=Denied, 3=Authorized
+        return int(AVCaptureDevice.authorizationStatusForMediaType_(AVMediaTypeAudio)) == 3
     except Exception:
         return False
 
@@ -304,7 +304,12 @@ class VoiceInputMenuBar(rumps.App):
             "Input Monitoring": _check_input_monitoring(),
             "Accessibility": _check_accessibility(),
         }
+        python_path = str(self._repo_dir / ".venv" / "bin" / "python3")
+        python_display = python_path.replace(str(Path.home()), "~")
         parent = rumps.MenuItem("Permissions")
+        # Informational header — shows which binary needs the permissions
+        parent["__hint__"] = rumps.MenuItem(f"Grant to: {python_display}")
+        parent["__sep__"] = rumps.MenuItem("─────────────────")
         for name, granted in checks.items():
             url = _PERM_URLS[name]
             item = rumps.MenuItem(name, callback=lambda _, u=url: subprocess.Popen(["open", u]))
