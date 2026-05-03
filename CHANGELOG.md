@@ -1,6 +1,10 @@
 # Changelog
 
 All notable changes to voice-input.
+## [unreleased]
+### 2026-05-03
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`8800fac`](https://github.com/artur-arc/voice-input/commit/8800fac230f62d9df112cf5a3857745649e05b68) Reduce int8 timeout to 60s, add sound on model ready
+
 ## v1.0.24 — 2026-05-03
 ### 2026-05-03
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`c00603c`](https://github.com/artur-arc/voice-input/commit/c00603c4f7cc3834976df9f162fa9759a9300b3c) Release v1.0.24

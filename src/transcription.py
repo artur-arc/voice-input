@@ -155,8 +155,12 @@ class _WindowsTranscriber(Transcriber):
         return self._ready.is_set()
 
     def warm_up(self) -> None:
+        import os
         import threading
         from pathlib import Path
+        # Set before first ctranslate2 import — prevents ISA misdetection hang on CPUs
+        # that incorrectly report AVX2 support. Power users can override via env var.
+        os.environ.setdefault("CT2_FORCE_CPU_ISA", "GENERIC")
         from faster_whisper import WhisperModel  # lazy — Windows only package
 
         try:
