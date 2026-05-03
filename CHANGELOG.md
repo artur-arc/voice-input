@@ -1,6 +1,10 @@
 # Changelog
 
 All notable changes to voice-input.
+## [unreleased]
+### 2026-05-03
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`c7cea41`](https://github.com/artur-arc/voice-input/commit/c7cea4110ab19bc6676f22077706c22d563b2bbc) Pin ctranslate2<4.7, auto-downgrade if 4.7+ detected
+
 ## v1.0.38 — 2026-05-03
 ### 2026-05-03
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`7cf1a74`](https://github.com/artur-arc/voice-input/commit/7cf1a74ccb503bf79a335babd54ceb9a8fce9725) Release v1.0.38
