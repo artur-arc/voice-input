@@ -15,7 +15,7 @@ class ConfigManager:
     def __init__(self, config_file: Path) -> None:
         self._config_file = config_file
         self._lock = threading.Lock()
-        self._mode_index: int = 1
+        self._mode_index: int = 2
         self._input_device: str | None = None
         self._watch_thread: threading.Thread | None = None
 
