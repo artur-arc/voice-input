@@ -1,8 +1,9 @@
 # Changelog
 
 All notable changes to voice-input.
-## [unreleased]
+## v1.0.35 — 2026-05-03
 ### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`b5ca27f`](https://github.com/artur-arc/voice-input/commit/b5ca27f3abdcd4a1d5aa7ddffe8db7fd5fa0af01) Release v1.0.35
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`97f4c87`](https://github.com/artur-arc/voice-input/commit/97f4c87fc01da6703f2882ec1894058c9b23562f) Kill existing tray instance before launching fresh one
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`ed9ff53`](https://github.com/artur-arc/voice-input/commit/ed9ff53884286d1aba7fe2499882b79fc1bd0d5c) Re-download model when model.bin is missing or oversized
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`9e0e4bd`](https://github.com/artur-arc/voice-input/commit/9e0e4bd5d72462901e3eff50f0ca6d88db63d277) Release v1.0.34

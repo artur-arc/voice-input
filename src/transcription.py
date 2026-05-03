@@ -137,7 +137,7 @@ class _MacTranscriber(Transcriber):
         return result["text"].strip() or None
 
 
-_INT8_TIMEOUT = 60    # seconds per compute_type probe in worker subprocess
+_INT8_TIMEOUT = 300   # seconds per compute_type probe in worker subprocess
 _FLOAT32_TIMEOUT = 300
 
 # Cache file: stores the compute_type that worked last time so future starts skip detection
