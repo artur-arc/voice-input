@@ -1,6 +1,6 @@
 # voice-input
 
-Hold <kbd>⌘ Right Cmd</kbd>, speak, release — the transcribed text gets pasted into whatever app is focused.
+Hold <kbd>⌘ Right Cmd</kbd>, speak, release — the transcribed text is pasted at the cursor position in any app: browser, notes, chat, code editor, any text field.
 Tap <kbd>⌥ Right Option</kbd> to cycle language modes: `ru→en` · `ru→ru` · `en→en`
 
 Runs as a background launchd service on Apple Silicon Macs. Uses mlx-whisper with the
