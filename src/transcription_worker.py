@@ -5,6 +5,8 @@ import sys
 
 # Must be set before ctranslate2 is imported.
 os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 os.environ.setdefault("CT2_FORCE_CPU_ISA", "GENERIC")
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
@@ -25,12 +27,33 @@ def _ws(s: str) -> None:
     _WR.flush()
 
 
+def _log(msg: str) -> None:
+    print(msg, file=sys.stderr, flush=True)
+
+
 def main() -> None:
     model_name = _rs()
     compute_type = _rs()
 
+    _log(f"WORKER: start model={model_name} compute_type={compute_type}")
+
     try:
+        import ctranslate2 as _ct2  # type: ignore[import]
+        _log(f"WORKER: ctranslate2 version={_ct2.__version__}")
+    except Exception as exc:
+        _log(f"WORKER: ctranslate2 import error: {exc}")
+
+    try:
+        _log("WORKER: importing faster_whisper")
         from faster_whisper import WhisperModel  # type: ignore[import]
+        _log("WORKER: faster_whisper imported OK")
+    except Exception as exc:
+        _log(f"WORKER: faster_whisper import failed: {exc}")
+        _ws(f"ERROR:{exc}")
+        sys.exit(1)
+
+    _log("WORKER: calling WhisperModel()")
+    try:
         model = WhisperModel(
             model_name,
             device="cpu",
@@ -38,8 +61,10 @@ def main() -> None:
             cpu_threads=1,
             num_workers=1,
         )
+        _log("WORKER: WhisperModel() OK")
         _ws("READY")
     except Exception as exc:
+        _log(f"WORKER: WhisperModel() exception: {exc}")
         _ws(f"ERROR:{exc}")
         sys.exit(1)
 

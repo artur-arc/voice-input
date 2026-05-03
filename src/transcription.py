@@ -250,8 +250,10 @@ class _WindowsTranscriber(Transcriber):
 
             if self._proc is None and not self._load_error:
                 self._load_error = (
-                    "Model failed to load with int8 and float32 — "
-                    "check tray_windows.log for ctranslate2 errors."
+                    "Model failed to load with int8 and float32. "
+                    "Likely cause: stale model cache (ctranslate2 format mismatch). "
+                    "Fix: delete %USERPROFILE%\\.cache\\huggingface\\hub\\models--Systran--faster-whisper-* "
+                    "then re-run setup.py"
                 )
                 logger.error(self._load_error)
 
@@ -296,7 +298,7 @@ class _WindowsTranscriber(Transcriber):
         stderr_out = ""
         try:
             proc.wait(timeout=5)
-            raw = proc.stderr.read(4096) if proc.stderr else b""
+            raw = proc.stderr.read(65536) if proc.stderr else b""
             stderr_out = raw.decode("utf-8", errors="replace").strip()
         except Exception:
             pass
@@ -308,8 +310,16 @@ class _WindowsTranscriber(Transcriber):
         if stderr_out:
             logger.error("Worker stderr (ct=%s):\n%s", compute_type, stderr_out)
         if proc.returncode is not None and proc.returncode != 0:
-            logger.error("Worker exit code: %d (0x%08X)", proc.returncode,
-                         proc.returncode & 0xFFFFFFFF)
+            rc = proc.returncode & 0xFFFFFFFF
+            logger.error("Worker exit code: %d (0x%08X)", proc.returncode, rc)
+            if rc == 0xC0000005:
+                logger.error(
+                    "0xC0000005 = STATUS_ACCESS_VIOLATION — ctranslate2 native crash. "
+                    "This often means the cached model is in an old format (ctranslate2 v3) "
+                    "incompatible with the installed ctranslate2 v4+. "
+                    "Fix: delete the model directory and re-run setup.py to re-download:\n"
+                    "  del /s /q %%USERPROFILE%%\\.cache\\huggingface\\hub\\models--Systran--faster-whisper-*"
+                )
 
         self._terminate(proc)
         return None
