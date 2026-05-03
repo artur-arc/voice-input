@@ -1,3 +1,4 @@
+import logging
 import threading
 import time
 from typing import Final
@@ -16,6 +17,11 @@ from transcription import Transcriber
 RECORD_KEY: Final[Key] = Key.cmd_r
 MODE_KEY: Final[Key] = Key.alt_r
 
+logger = logging.getLogger(__name__)
+
+_LISTENER_MAX_RESTARTS: Final[int] = 5
+_LISTENER_RESTART_DELAY: Final[float] = 1.0
+
 
 class VoiceInputApp:
     def __init__(
@@ -32,21 +38,51 @@ class VoiceInputApp:
 
     def start(self) -> None:
         self._config.load()
-        print(f"Mic: {self._recorder.device_name}")
-        print(f"Loading {self._transcriber.model_repo}...")
+        logger.info("Mic: %s", self._recorder.device_name)
+        logger.info("Loading %s...", self._transcriber.model_repo)
         self._transcriber.warm_up()
 
         m = self._config.current_mode()
         ax_ok = has_accessibility()
-        print(f"Ready. Mode: {m.label} | accessibility: {'✓' if ax_ok else '✗ (paste disabled)'}")
+        logger.info(
+            "Ready. Mode: %s | accessibility: %s",
+            m.label,
+            "yes" if ax_ok else "no (paste disabled)",
+        )
         if not ax_ok:
-            print("  → Add to Accessibility: System Settings > Privacy & Security > Accessibility")
-            print(f"  → Binary: {accessibility_binary()}")
-        self._feedback.notify("Voice Input", f"Ready · {m.label}" + ("" if ax_ok else " · no paste"))
+            logger.warning(
+                "Add to Accessibility: System Settings > Privacy & Security > Accessibility"
+            )
+            logger.warning("Binary: %s", accessibility_binary())
+        self._feedback.notify(
+            "Voice Input",
+            f"Ready · {m.label}" + ("" if ax_ok else " · no paste"),
+        )
         self._config.watch(self._on_config_change)
+        self._run_listener()
 
-        with keyboard.Listener(on_press=self._on_press, on_release=self._on_release) as listener:
-            listener.join()
+    def _run_listener(self) -> None:
+        attempts = 0
+        while attempts < _LISTENER_MAX_RESTARTS:
+            try:
+                with keyboard.Listener(
+                    on_press=self._on_press,
+                    on_release=self._on_release,
+                ) as listener:
+                    listener.join()
+                return  # clean exit
+            except Exception:
+                attempts += 1
+                logger.exception(
+                    "Keyboard listener crashed (attempt %d/%d)",
+                    attempts,
+                    _LISTENER_MAX_RESTARTS,
+                )
+                if attempts < _LISTENER_MAX_RESTARTS:
+                    time.sleep(_LISTENER_RESTART_DELAY)
+        logger.error(
+            "Keyboard listener failed %d times — giving up", _LISTENER_MAX_RESTARTS
+        )
 
     def _on_press(self, key: Key | KeyCode | None) -> None:
         if key == RECORD_KEY:
@@ -63,15 +99,15 @@ class VoiceInputApp:
         new_index = (MODES.index(current) + 1) % len(MODES)
         self._config.save(new_index)
         m = self._config.current_mode()
-        print(f"Mode → {m.label}")
+        logger.info("Mode → %s", m.label)
         self._feedback.notify("Voice Input", f"Mode: {m.label}")
         self._feedback.play("Tink")
 
     def _start_recording(self) -> None:
         try:
             self._recorder.start()
-        except Exception as e:
-            print(f"Mic error: {e}")
+        except Exception:
+            logger.exception("Failed to start recording")
             self._feedback.play("Funk")
             return
         self._feedback.play("Tink")
@@ -93,20 +129,22 @@ class VoiceInputApp:
             text = self._transcriber.transcribe(audio, m)
 
             if not text:
-                print(f"[{time.time() - t0:.1f}s] (no speech detected)")
+                logger.warning("[%.1fs] No speech detected", time.time() - t0)
                 self._feedback.play("Funk")
                 return
 
             elapsed = time.time() - t0
-            print(f"[{elapsed:.1f}s] [{m.label}] {text}")
+            logger.info("[%.1fs] [%s] %s", elapsed, m.label, text)
 
             pasted = paste_text(text)
             if not pasted:
-                print("  (text in clipboard — grant Accessibility to enable auto-paste)")
+                logger.warning(
+                    "Text placed in clipboard — grant Accessibility to enable auto-paste"
+                )
             self._feedback.play("Pop")
-        except Exception as e:
-            print(f"Error: {e}")
+        except Exception:
+            logger.exception("Transcription/paste error")
             self._feedback.play("Funk")
 
     def _on_config_change(self, _index: int) -> None:
-        print(f"Config reloaded → mode: {self._config.current_mode().label}")
+        logger.info("Config reloaded → mode: %s", self._config.current_mode().label)

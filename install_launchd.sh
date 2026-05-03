@@ -35,6 +35,8 @@ generate_plist() {
     <true/>
     <key>KeepAlive</key>
     <true/>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
 
     <key>StandardOutPath</key>
     <string>$DIR/voice_input.log</string>
