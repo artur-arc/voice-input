@@ -3,6 +3,8 @@ setlocal enabledelayedexpansion
 
 set "INSTALL_DIR=%USERPROFILE%\voice-input"
 set "GITHUB_REPO=artur-arc/voice-input"
+set "PYTHON_VER=3.11.9"
+set "PYTHON_URL=https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe"
 
 cls
 echo.
@@ -12,24 +14,51 @@ echo.
 echo  This will take a few minutes. Do not close this window.
 echo.
 
-:: ── Python 3.11+ (try py launcher, python3, python) ──────────────────────────
+:: ── Python 3.11+ ──────────────────────────────────────────────────────────────
 echo Checking Python...
-set "PYTHON="
+call :find_python
+if defined PYTHON goto :python_ok
 
-py --version >nul 2>&1
-if not errorlevel 1 ( set "PYTHON=py" & goto :python_found )
-python3 --version >nul 2>&1
-if not errorlevel 1 ( set "PYTHON=python3" & goto :python_found )
-python --version >nul 2>&1
-if not errorlevel 1 ( set "PYTHON=python" & goto :python_found )
-
+echo  Python not found. Installing automatically...
 echo.
-echo  Python not found.
-echo  Install Python 3.11+ from: https://www.python.org/downloads/
-echo  Check "Add Python to PATH" during installation, then re-run this file.
-goto :error
 
-:python_found
+:: Try winget first (available on Windows 10 1709+ and Windows 11)
+winget --version >nul 2>&1
+if not errorlevel 1 (
+    echo  Trying winget...
+    winget install --id Python.Python.3.11 -e --silent --scope user ^
+        --accept-package-agreements --accept-source-agreements
+    if not errorlevel 1 (
+        call :refresh_path
+        call :find_python
+        if defined PYTHON goto :python_ok
+    )
+)
+
+:: Fallback: download Python installer directly from python.org
+echo  Downloading Python %PYTHON_VER% installer...
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "Invoke-WebRequest '%PYTHON_URL%' -OutFile '$env:TEMP\python-installer.exe' -UseBasicParsing"
+if errorlevel 1 (
+    echo.
+    echo  Download failed. Please install Python 3.11+ manually from:
+    echo    https://www.python.org/downloads/
+    echo  Check "Add Python to PATH" during installation, then re-run this file.
+    goto :error
+)
+echo  Installing Python %PYTHON_VER%...
+"%TEMP%\python-installer.exe" /quiet InstallAllUsers=0 PrependPath=1 Include_pip=1
+del "%TEMP%\python-installer.exe" 2>nul
+
+call :refresh_path
+call :find_python
+if not defined PYTHON (
+    echo  Python installation failed. Please install manually from:
+    echo    https://www.python.org/downloads/
+    goto :error
+)
+
+:python_ok
 for /f "tokens=2" %%V in ('!PYTHON! --version 2^>^&1') do set "PY_VER=%%V"
 for /f "tokens=1 delims=." %%M in ("!PY_VER!") do set "PY_MAJOR=%%M"
 for /f "tokens=2 delims=." %%m in ("!PY_VER!") do set "PY_MINOR=%%m"
@@ -43,7 +72,6 @@ echo Downloading Voice Input...
 if exist "%INSTALL_DIR%" rmdir /s /q "%INSTALL_DIR%"
 mkdir "%INSTALL_DIR%"
 
-:: Write PS1 script line by line (avoids ^ continuation quoting issues)
 set "PS1=%TEMP%\vi-install.ps1"
 set "VI_DEST=%INSTALL_DIR%"
 
@@ -76,6 +104,23 @@ cd /d "%INSTALL_DIR%"
 !PYTHON! setup.py
 if errorlevel 1 goto :error
 goto :end
+
+:: ── Helpers ───────────────────────────────────────────────────────────────────
+
+:find_python
+set "PYTHON="
+py      --version >nul 2>&1 && set "PYTHON=py"      && goto :eof
+python3 --version >nul 2>&1 && set "PYTHON=python3" && goto :eof
+python  --version >nul 2>&1 && set "PYTHON=python"  && goto :eof
+goto :eof
+
+:refresh_path
+powershell -NoProfile -Command ^
+    "$p = [Environment]::GetEnvironmentVariable('PATH','Machine') + ';' + [Environment]::GetEnvironmentVariable('PATH','User'); $p | Out-File '$env:TEMP\vi-path.txt' -Encoding ASCII -NoNewline"
+set /p "NEW_PATH=" < "%TEMP%\vi-path.txt"
+del "%TEMP%\vi-path.txt" 2>nul
+if defined NEW_PATH set "PATH=!NEW_PATH!"
+goto :eof
 
 :error
 echo.
