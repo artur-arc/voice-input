@@ -9,6 +9,7 @@ os.environ.setdefault("MKL_NUM_THREADS", "1")
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 os.environ.setdefault("CT2_FORCE_CPU_ISA", "GENERIC")
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+os.environ.setdefault("CT2_VERBOSE", "1")
 
 import numpy as np  # noqa: E402 — after env vars
 

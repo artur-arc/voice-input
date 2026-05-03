@@ -3,6 +3,11 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`5bb317d`](https://github.com/artur-arc/voice-input/commit/5bb317d82c631578af9bc6ccaaeee014a8a5ac7e) Enable verbose mode for CT2 library
+
+## v1.0.39 — 2026-05-03
+### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`0a7c9d8`](https://github.com/artur-arc/voice-input/commit/0a7c9d810ebf7d467949509b952b887c2682df7c) Release v1.0.39
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`c7cea41`](https://github.com/artur-arc/voice-input/commit/c7cea4110ab19bc6676f22077706c22d563b2bbc) Pin ctranslate2<4.7, auto-downgrade if 4.7+ detected
 
 ## v1.0.38 — 2026-05-03
