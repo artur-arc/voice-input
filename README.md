@@ -15,13 +15,18 @@ Runs as a background launchd service on Apple Silicon Macs. Uses mlx-whisper wit
 
 ## Installation
 
+**Option A (recommended):** Download `install.command`, then double-click it in Finder. macOS
+opens Terminal and runs the full install automatically. No Terminal knowledge needed.
+
+**Option B:**
+
 ```bash
 git clone https://github.com/artur-arc/voice-input && cd voice-input && ./setup.sh
 ```
 
-`setup.sh` handles everything in order: checks that you are on Apple Silicon, installs Homebrew
-and Python 3.11+ if missing, creates a virtual environment, installs Python packages, downloads
-the Whisper model (~1.5 GB), walks through three permission prompts, and registers a launchd
+Both options handle everything in order: check that you are on Apple Silicon, install Homebrew
+and Python 3.11+ if missing, create a virtual environment, install Python packages, download
+the Whisper model (~1.5 GB), walk through three permission prompts, and register a launchd
 agent so the service starts automatically at login.
 
 When the permission prompts appear, find `python` or `Terminal` in each System Settings pane
@@ -43,9 +48,12 @@ Right Option cycles through the three modes in order:
 
 | Mode | Config key | What it does |
 |---|---|---|
-| `ru→en` | `russian-english` | Russian speech → English text (translation) |
+| `ru→en` | `russian-english` | Russian speech → English text (Whisper translation) |
 | `ru→ru` | `russian-russian` | Russian speech → Russian text (transcription) |
-| `en→en` | `english-russian` | English speech → English text (transcription) |
+| `en→en` | `english-english` | English speech → English text (transcription) |
+
+Note: Whisper's translate task only outputs English. A Russian-output translation mode is not
+possible with this model.
 
 ## Configuration
 
@@ -59,7 +67,6 @@ To change the mode manually, set exactly one key to `true` and the rest to `fals
     "voiceInputConfig": {
         "russian-english": false,
         "russian-russian": true,
-        "english-russian": false,
         "english-english": false
     }
 }
