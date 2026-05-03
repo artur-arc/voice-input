@@ -19,7 +19,11 @@ logger = logging.getLogger(__name__)
 
 
 def _detect_win_model() -> str:
-    """Choose faster-whisper model based on total physical RAM (no extra dependencies)."""
+    """Choose faster-whisper model based on total physical RAM.
+
+    setup.py guarantees the cache always contains the RAM-appropriate model,
+    so we select by RAM here without inspecting the cache.
+    """
     import ctypes
 
     class _MemStatus(ctypes.Structure):

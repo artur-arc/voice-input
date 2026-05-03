@@ -69,12 +69,13 @@ if not defined PYTHON (
     goto :error
 )
 
-:: ── Download Voice Input (skip if already extracted from zip) ────────────────
+:: ── Copy from zip or download from GitHub ────────────────────────────────────
 :download
 if exist "%~dp0setup.py" (
     echo.
-    echo  Found setup.py alongside install.bat — skipping download.
-    set "INSTALL_DIR=%~dp0"
+    echo  Found local files — copying to %INSTALL_DIR%...
+    if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
+    xcopy /E /Y /I /Q "%~dp0." "%INSTALL_DIR%\" >nul
     goto :run_setup
 )
 

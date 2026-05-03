@@ -28,7 +28,7 @@ else:
     REQUIREMENTS = REPO_DIR / "requirements.txt"
 
 _MAC_MODEL  = "mlx-community/whisper-large-v3-mlx"
-_WIN_MODEL  = "large-v3"  # overridden at runtime by _detect_win_model()
+_WIN_MODELS = ("large-v3", "medium", "small")  # ordered heaviest → lightest
 
 
 def _detect_win_model() -> str:
@@ -62,6 +62,14 @@ def _detect_win_model() -> str:
         return "medium"     # ~470 MB model, 5–15 s on CPU
     else:
         return "small"      # ~150 MB model, 2–5 s on CPU
+
+
+def _cached_win_model(cache_dir: Path) -> str | None:
+    """Return the name of the currently cached faster-whisper model, or None."""
+    for candidate in _WIN_MODELS:
+        if any(cache_dir.glob(f"*faster-whisper-{candidate}*")):
+            return candidate
+    return None
 
 GREEN = "\033[0;32m"
 BOLD  = "\033[1m"
@@ -115,8 +123,8 @@ def install_packages() -> None:
 def download_model() -> None:
     env = os.environ.copy()
     env["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
-    env["HF_HUB_DISABLE_IMPLICIT_TOKEN"] = "1"
     env["PYTHONUNBUFFERED"] = "1"
+    # Allow hf-xet (fast XET protocol) — removing DISABLE_IMPLICIT_TOKEN lets it activate
 
     if IS_MAC:
         cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
@@ -132,17 +140,25 @@ def download_model() -> None:
         )
         subprocess.run([str(VENV_PY), "-c", script], check=True, env=env)
     else:
-        model = _detect_win_model()
-        sizes = {"large-v3": "~1.5 GB", "medium": "~470 MB", "small": "~150 MB"}
-        cache_glob = f"*faster-whisper-{model}*"
+        target = _detect_win_model()
         cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
-        if cache_dir.exists() and any(cache_dir.glob(cache_glob)):
-            ok(f"Model already cached ({model})")
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        cached = _cached_win_model(cache_dir)
+
+        if cached == target:
+            ok(f"Model already correct ({target})")
             return
-        print(f"  Selected model: {model} ({sizes.get(model, '?')}) based on available RAM")
-        print(f"  Downloading — this takes a few minutes...")
-        # Write a script file: tqdm must be patched before faster_whisper is imported
-        # so that huggingface_hub picks up our subclass (which forces disable=False).
+
+        sizes = {"large-v3": "~1.5 GB", "medium": "~470 MB", "small": "~150 MB"}
+        if cached:
+            print(f"  Replacing {cached} → {target} ({sizes.get(target, '?')})...")
+        else:
+            print(f"  Selected model: {target} ({sizes.get(target, '?')}) based on available RAM")
+            print(f"  Downloading — this takes a few minutes...")
+
+        # Download-only script: patch tqdm for visible progress, then trigger HF download.
+        # We do NOT call WhisperModel() here — ctranslate2 crashes (exit 3221225477)
+        # on some AMD/Intel CPUs during model init. The actual load happens at first use.
         dl = REPO_DIR / "_dl.py"
         dl.write_text(
             "import sys, tqdm\n"
@@ -165,9 +181,9 @@ def download_model() -> None:
             "except Exception:\n"
             "    pass\n"
             "\n"
-            "from faster_whisper import WhisperModel\n"
-            f"WhisperModel('{model}', device='cpu', compute_type='int8')\n"
-            "print('  Model ready.', flush=True)\n",
+            "from huggingface_hub import snapshot_download\n"
+            f"snapshot_download('Systran/faster-whisper-{target}')\n"
+            "print('  Model files downloaded.', flush=True)\n",
             encoding="utf-8",
         )
         try:
@@ -175,7 +191,13 @@ def download_model() -> None:
         finally:
             dl.unlink(missing_ok=True)
 
-    ok("Model downloaded and warmed up")
+        # Remove old model from cache to free disk space
+        if cached:
+            for old_dir in cache_dir.glob(f"*faster-whisper-{cached}*"):
+                shutil.rmtree(old_dir, ignore_errors=True)
+            ok(f"Removed old model ({cached})")
+
+    ok("Model ready")
 
 
 def setup_autostart() -> None:
