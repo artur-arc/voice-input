@@ -1,4 +1,10 @@
 """Hold Right Cmd to record speech. Right Option to cycle language mode."""
+import os
+
+# Must be set before any library imports tqdm or huggingface_hub.
+os.environ.setdefault("TQDM_DISABLE", "1")
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+
 import logging
 import sys
 from pathlib import Path

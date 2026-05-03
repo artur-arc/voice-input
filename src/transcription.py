@@ -1,3 +1,5 @@
+import contextlib
+import io
 import logging
 
 import mlx_whisper
@@ -18,12 +20,13 @@ class Transcriber:
 
     def warm_up(self) -> None:
         try:
-            mlx_whisper.transcribe(
-                np.zeros(SAMPLE_RATE, dtype=np.float32),
-                path_or_hf_repo=self._model_repo,
-                language="en",
-                verbose=False,
-            )
+            with contextlib.redirect_stderr(io.StringIO()):
+                mlx_whisper.transcribe(
+                    np.zeros(SAMPLE_RATE, dtype=np.float32),
+                    path_or_hf_repo=self._model_repo,
+                    language="en",
+                    verbose=False,
+                )
             logger.info("Model warm-up complete: %s", self._model_repo)
         except Exception:
             logger.exception("Model warm-up failed for %s", self._model_repo)
@@ -33,16 +36,17 @@ class Transcriber:
         """Return transcribed text, or None if audio is too short or result is empty."""
         if len(audio) < SAMPLE_RATE * MIN_RECORD_SEC:
             return None
-        result = mlx_whisper.transcribe(
-            audio,
-            path_or_hf_repo=self._model_repo,
-            task=mode.task,
-            language=mode.language,
-            # Whisper initial_prompt primes the model for the target language.
-            # The Russian string is intentional — improves Russian transcription accuracy.
-            initial_prompt=Transcriber._initial_prompt(mode.language),
-            verbose=False,
-        )
+        with contextlib.redirect_stderr(io.StringIO()):
+            result = mlx_whisper.transcribe(
+                audio,
+                path_or_hf_repo=self._model_repo,
+                task=mode.task,
+                language=mode.language,
+                # Whisper initial_prompt primes the model for the target language.
+                # The Russian string is intentional — improves Russian transcription accuracy.
+                initial_prompt=Transcriber._initial_prompt(mode.language),
+                verbose=False,
+            )
         return result["text"].strip() or None
 
     @staticmethod

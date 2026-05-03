@@ -74,7 +74,10 @@ class ConfigManager:
         self._watch_thread.start()
 
     def _watch_loop(self, on_change: Callable[[int], None]) -> None:
-        last_mtime = 0.0
+        try:
+            last_mtime = self._config_file.stat().st_mtime
+        except Exception:
+            last_mtime = 0.0
         while True:
             time.sleep(2)
             try:
