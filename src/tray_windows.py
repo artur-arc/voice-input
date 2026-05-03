@@ -287,6 +287,7 @@ class VoiceInputTray:
         self._updater = _WindowsUpdater(repo_dir)
         self._recording = False
         self._record_lock = threading.Lock()
+        self._loading_notified = False  # show "waiting for model" only once
 
         self._config.load()
 
@@ -315,6 +316,7 @@ class VoiceInputTray:
             self._icon.title = "Voice Input — loading model…"
             self._transcriber.warm_up()
             if self._transcriber.is_ready() and getattr(self._transcriber, "_load_error", None) is None:
+                self._loading_notified = False
                 mode = self._config.current_mode()
                 self._icon.title = f"Voice Input — {mode.label}"
                 self._feedback.play("Pop")
@@ -377,7 +379,8 @@ class VoiceInputTray:
     def _transcribe_and_paste(self, audio: Any) -> None:
         try:
             mode = self._config.current_mode()
-            if not self._transcriber.is_ready():
+            if not self._transcriber.is_ready() and not self._loading_notified:
+                self._loading_notified = True
                 self._feedback.notify("Voice Input", "Recording saved — waiting for model to load…")
             text = self._transcriber.transcribe(audio, mode)
             if not text:

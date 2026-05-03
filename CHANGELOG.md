@@ -1,8 +1,9 @@
 # Changelog
 
 All notable changes to voice-input.
-## [unreleased]
+## v1.0.37 — 2026-05-03
 ### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`5782a35`](https://github.com/artur-arc/voice-input/commit/5782a35080e1864a7d262d58b0c2db0d0ce5b1b2) Release v1.0.37
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`5337d27`](https://github.com/artur-arc/voice-input/commit/5337d27400f73b51990d7524339ae85ca452ea25) Ensure logging setup runs only once
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`1991136`](https://github.com/artur-arc/voice-input/commit/199113617645d955634f65ee82b9687f8324d1f7) Kill tray before model ops; show loading status in icon title
 
