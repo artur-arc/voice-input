@@ -170,7 +170,7 @@ def _create_win_launcher() -> Path:
         "    echo venv not found, run install.command\r\n"
         "    pause & exit /b 1\r\n"
         ")\r\n"
-        'start /b "" .venv\\Scripts\\pythonw.exe src\\main.py\r\n',
+        'start "" /b cmd /c ".venv\\Scripts\\pythonw.exe src\\main.py >> voice_input.log 2>&1"\r\n',
         encoding="utf-8",
     )
     return launcher
@@ -226,7 +226,14 @@ def launch_tray() -> None:
     """Windows only: start tray app (macOS relies on launchd)."""
     if not IS_WINDOWS:
         return
-    subprocess.Popen([str(VENV_PYW), str(REPO_DIR / "src" / "main.py")], close_fds=True)
+    log = REPO_DIR / "voice_input.log"
+    log_fh = open(log, "a", encoding="utf-8")
+    subprocess.Popen(
+        [str(VENV_PYW), str(REPO_DIR / "src" / "main.py")],
+        stdout=log_fh,
+        stderr=log_fh,
+    )
+    log_fh.close()
     ok("Voice Input launched in system tray")
 
 
