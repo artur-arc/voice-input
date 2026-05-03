@@ -4,8 +4,10 @@ from __future__ import annotations
 import ctypes
 import logging
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from collections.abc import Callable
@@ -510,17 +512,50 @@ class VoiceInputTray:
             logger.info("Process restarted")
 
     def _on_uninstall(self, icon: Any, item: Any) -> None:
+        cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
+        model_dirs = list(cache_dir.glob("models--Systran--faster-whisper-*"))
+        model_info = f"• Whisper model cache ({len(model_dirs)} folder(s))\n" if model_dirs else ""
+        confirmed = ctypes.windll.user32.MessageBoxW(
+            0,
+            f"This will permanently remove:\n"
+            f"• Startup entry\n"
+            f"{model_info}"
+            f"• App folder: {self._repo_dir}\n\n"
+            f"Continue?",
+            "Uninstall Voice Input",
+            0x04 | 0x30,  # MB_YESNO | MB_ICONWARNING
+        )
+        if confirmed != 6:  # IDYES
+            return
+
+        # Remove startup entry
         startup = (
             Path(os.environ.get("APPDATA", ""))
             / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
         )
-        bat = startup / "voice-input.bat"
-        bat.unlink(missing_ok=True)
-        ctypes.windll.user32.MessageBoxW(
-            0,
-            f"Startup entry removed.\nTo fully uninstall, delete:\n{self._repo_dir}",
-            "Voice Input Uninstalled",
-            0x40,  # MB_ICONINFORMATION
+        (startup / "voice-input.bat").unlink(missing_ok=True)
+
+        # Delete model cache
+        for d in model_dirs:
+            shutil.rmtree(d, ignore_errors=True)
+
+        # Delete the app folder after the process exits via a detached batch script
+        repo = str(self._repo_dir)
+        pid = os.getpid()
+        fd, tmp_path = tempfile.mkstemp(suffix=".bat", prefix="vi_uninstall_")
+        os.close(fd)
+        Path(tmp_path).write_text(
+            "@echo off\n"
+            f":wait\n"
+            f"tasklist /fi \"pid eq {pid}\" 2>nul | find \"{pid}\" >nul\n"
+            f"if not errorlevel 1 (timeout /t 1 /nobreak >nul & goto wait)\n"
+            f"rmdir /s /q \"{repo}\"\n"
+            "del \"%~f0\"\n",
+            encoding="utf-8",
+        )
+        subprocess.Popen(
+            ["cmd.exe", "/c", tmp_path],
+            creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NO_WINDOW,
         )
         icon.stop()
 
