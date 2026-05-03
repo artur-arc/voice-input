@@ -22,7 +22,8 @@ call :find_python
 if defined PYTHON (
     call :get_version
     echo  Found Python !PY_VER!
-    if !PY_MAJOR! geq 3 if !PY_MINOR! geq 11 set "NEED_PYTHON="
+    :: Compatible: 3.11 or 3.12 only — 3.13+ has no pre-built wheels for faster-whisper/ctranslate2
+    if !PY_MAJOR! geq 3 if !PY_MINOR! geq 11 if !PY_MINOR! leq 12 set "NEED_PYTHON="
 )
 
 :: Top-level goto — reliable, no blocks
@@ -30,7 +31,7 @@ if not defined NEED_PYTHON echo  OK  Python !PY_VER! is compatible - using it.
 if not defined NEED_PYTHON goto :download
 
 if defined PYTHON (
-    echo  Python !PY_VER! is too old ^(need 3.11+^). Installing %PYTHON_VER%...
+    echo  Python !PY_VER! is not compatible ^(need 3.11-3.12^). Installing Python %PYTHON_VER%...
 ) else (
     echo  Python not found. Installing Python %PYTHON_VER%...
 )
@@ -53,8 +54,8 @@ echo  Downloading Python %PYTHON_VER% installer...
 powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest '%PYTHON_URL%' -OutFile '%TEMP%\python-installer.exe' -UseBasicParsing"
 if errorlevel 1 (
     echo.
-    echo  Download failed. Please install Python 3.11+ manually from:
-    echo    https://www.python.org/downloads/
+    echo  Download failed. Please install Python 3.12 manually from:
+    echo    https://www.python.org/downloads/releases/python-3129/
     goto :error
 )
 echo  Installing Python %PYTHON_VER%...
@@ -134,9 +135,13 @@ goto :end
 
 :find_python
 set "PYTHON="
-py      --version >nul 2>&1 && set "PYTHON=py"      && goto :eof
-python3 --version >nul 2>&1 && set "PYTHON=python3" && goto :eof
-python  --version >nul 2>&1 && set "PYTHON=python"  && goto :eof
+:: Prefer 3.12 explicitly — works even when 3.13 is the system default
+py -3.12    --version >nul 2>&1 && set "PYTHON=py -3.12"    && goto :eof
+python3.12  --version >nul 2>&1 && set "PYTHON=python3.12"  && goto :eof
+:: Fall back to whatever is in PATH (version checked by caller)
+py          --version >nul 2>&1 && set "PYTHON=py"           && goto :eof
+python3     --version >nul 2>&1 && set "PYTHON=python3"      && goto :eof
+python      --version >nul 2>&1 && set "PYTHON=python"       && goto :eof
 goto :eof
 
 :get_version
