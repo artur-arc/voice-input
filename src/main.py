@@ -37,13 +37,13 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    # When stdout is redirected (launchd), it already captures to voice_input.log.
-    # Add RotatingFileHandler only for interactive runs to keep a persistent log.
     # macOS/launchd: stdout already captured — no extra file handler needed
     # Windows/pythonw.exe: stdout is null — must log to file
     setup_logging(LOG_FILE if (sys.platform == "win32" or sys.stdout.isatty()) else None)
+    logger.info("=== Voice Input starting (pid=%d) ===", os.getpid())
     try:
         main()
+        logger.info("=== Voice Input exited normally ===")
     except Exception:
-        logger.exception("Unhandled exception in main — exiting")
+        logger.exception("=== CRASH: unhandled exception in main ===")
         sys.exit(1)

@@ -281,12 +281,18 @@ class VoiceInputTray:
             logger.exception("Warm-up failed")
 
     def _run_listener(self) -> None:
-        with Listener(on_press=self._on_press, on_release=self._on_release):
-            while True:
-                time.sleep(60)
+        logger.info("Keyboard listener starting (RECORD_KEY=%r, MODE_KEY=%r)", RECORD_KEY, MODE_KEY)
+        try:
+            with Listener(on_press=self._on_press, on_release=self._on_release) as listener:
+                logger.info("Keyboard listener active")
+                listener.join()
+        except Exception:
+            logger.exception("Keyboard listener crashed")
 
     def _on_press(self, key: Any) -> None:
+        logger.info("Key pressed: %r", key)
         if key == RECORD_KEY:
+            logger.info("RECORD_KEY pressed — starting recording")
             with self._record_lock:
                 if self._recording:
                     return
@@ -295,11 +301,13 @@ class VoiceInputTray:
             self._feedback.play("Pop")
 
     def _on_release(self, key: Any) -> None:
+        logger.info("Key released: %r", key)
         if key == RECORD_KEY:
             with self._record_lock:
                 if not self._recording:
                     return
                 self._recording = False
+            logger.info("RECORD_KEY released — stopping recording")
             audio = self._recorder.stop()
             threading.Thread(
                 target=self._transcribe_and_paste,
@@ -355,6 +363,7 @@ class VoiceInputTray:
         # pystray 0.19.5 inspects ALL positional params (incl. defaults),
         # so lambdas with capture defaults (3 params) are rejected.
         # Wrap with an immediately-called outer lambda to produce a clean 2-param callable.
+        # default=False prevents pystray from auto-activating the first item on left-click.
         for m in MODES:
             _key = m.key
             _label = m.label
@@ -363,6 +372,7 @@ class VoiceInputTray:
                 (lambda k: lambda icon, item: self._on_mode(k))(_key),
                 checked=(lambda k: lambda item: self._config.current_mode().key == k)(_key),
                 radio=True,
+                default=False,
             ))
 
         items.append(pystray.Menu.SEPARATOR)
@@ -373,6 +383,7 @@ class VoiceInputTray:
             lambda icon, item: self._on_device(None),
             checked=lambda item: self._config.input_device() is None,
             radio=True,
+            default=False,
         ))
         for _idx, name in devices:
             _n = name
@@ -381,6 +392,7 @@ class VoiceInputTray:
                 (lambda n: lambda icon, item: self._on_device(n))(_n),
                 checked=(lambda n: lambda item: self._config.input_device() == n)(_n),
                 radio=True,
+                default=False,
             ))
 
         items.append(pystray.Menu.SEPARATOR)
@@ -390,20 +402,21 @@ class VoiceInputTray:
             pystray.MenuItem(
                 name,
                 (lambda u: lambda icon, item: os.startfile(u))(url),
+                default=False,
             )
             for name, url in _WIN_PERM_URLS.items()
         ]
-        items.append(pystray.MenuItem("Permissions", pystray.Menu(*perm_items)))
+        items.append(pystray.MenuItem("Permissions", pystray.Menu(*perm_items), default=False))
 
         items.append(pystray.Menu.SEPARATOR)
 
         items.append(pystray.MenuItem(f"Version {local_ver}", None, enabled=False))
-        items.append(pystray.MenuItem("Restart to Update", self._on_restart_update))
+        items.append(pystray.MenuItem("Restart to Update", self._on_restart_update, default=False))
 
         items.append(pystray.Menu.SEPARATOR)
 
-        items.append(pystray.MenuItem("Uninstall…", self._on_uninstall))
-        items.append(pystray.MenuItem("Quit", self._on_quit))
+        items.append(pystray.MenuItem("Uninstall…", self._on_uninstall, default=False))
+        items.append(pystray.MenuItem("Quit", self._on_quit, default=False))
 
         return pystray.Menu(*items)
 
@@ -469,21 +482,28 @@ class VoiceInputTray:
         icon.stop()
 
     def _on_quit(self, icon: Any, item: Any) -> None:
+        logger.info("Quit requested via menu")
         icon.stop()
 
 
 def main() -> None:
+    import os as _os
     log_file = _REPO_DIR / "tray_windows.log"
     setup_logging(log_file)  # pythonw.exe has no stdout — always log to file
-    logger.info("Windows tray starting (version %s)", _read_version(_VERSION_FILE))
-    config = ConfigManager(_CONFIG_FILE)
-    VoiceInputTray(
-        config=config,
-        recorder=AudioRecorder(),
-        transcriber=Transcriber(),  # uses large-v3 on Windows; MODEL_REPO is mlx-only
-        feedback=UserFeedback(),
-        repo_dir=_REPO_DIR,
-    ).run()
+    logger.info("=== Windows tray starting (version %s, pid=%d) ===",
+                _read_version(_VERSION_FILE), _os.getpid())
+    try:
+        config = ConfigManager(_CONFIG_FILE)
+        VoiceInputTray(
+            config=config,
+            recorder=AudioRecorder(),
+            transcriber=Transcriber(),  # uses large-v3 on Windows; MODEL_REPO is mlx-only
+            feedback=UserFeedback(),
+            repo_dir=_REPO_DIR,
+        ).run()
+        logger.info("=== Windows tray exited normally ===")
+    except Exception:
+        logger.exception("=== CRASH: unhandled exception in tray main ===")
 
 
 if __name__ == "__main__":
