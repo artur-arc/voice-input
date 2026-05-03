@@ -3,6 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-03
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`2c80315`](https://github.com/artur-arc/voice-input/commit/2c80315ad11aaf1b3d24a2bed475f0202f26f4bb) Delete mlx-whisper model cache on macOS uninstall
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`884854a`](https://github.com/artur-arc/voice-input/commit/884854a04a443d74441a44f39aa4402901121758) Delete model cache and app folder on uninstall
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`9427edb`](https://github.com/artur-arc/voice-input/commit/9427edb35e4c9ebd0f22708d0d9e1b58b4121068) Auto-detect and replace stale ctranslate2 v3 format models
 
