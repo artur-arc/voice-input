@@ -6,6 +6,7 @@ import io
 import logging
 import sys
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -135,6 +136,24 @@ class _MacTranscriber(Transcriber):
 _INT8_TIMEOUT = 60    # seconds — int8 requires AVX2; fail fast on unsupported CPUs
 _FLOAT32_TIMEOUT = 240  # seconds — float32 is slower but works on any x86_64
 
+# Cache file: stores the compute_type that worked last time so future starts skip detection
+_COMPUTE_TYPE_CACHE = Path(__file__).parent.parent / ".ct2_compute_type"
+
+
+def _read_cached_compute_type() -> str | None:
+    try:
+        ct = _COMPUTE_TYPE_CACHE.read_text(encoding="utf-8").strip()
+        return ct if ct in ("int8", "float32") else None
+    except Exception:
+        return None
+
+
+def _save_cached_compute_type(ct: str) -> None:
+    try:
+        _COMPUTE_TYPE_CACHE.write_text(ct, encoding="utf-8")
+    except Exception:
+        pass
+
 
 class _WindowsTranscriber(Transcriber):
     """faster-whisper backend — Windows/CPU (int8 quantization)."""
@@ -157,10 +176,10 @@ class _WindowsTranscriber(Transcriber):
     def warm_up(self) -> None:
         import os
         import threading
-        from pathlib import Path
-        # Set before first ctranslate2 import — prevents ISA misdetection hang on CPUs
-        # that incorrectly report AVX2 support. Power users can override via env var.
+        # Prevent ctranslate2 ISA misdetection hang (AVX2 on non-AVX2 CPUs).
+        # Prevent OpenMP thread-pool collision (Intel MKL vs LLVM OMP on Windows).
         os.environ.setdefault("CT2_FORCE_CPU_ISA", "GENERIC")
+        os.environ.setdefault("OMP_NUM_THREADS", "1")
         from faster_whisper import WhisperModel  # lazy — Windows only package
 
         try:
@@ -175,13 +194,18 @@ class _WindowsTranscriber(Transcriber):
                 logger.error(self._load_error)
                 return
 
-            logger.info("Model found in cache — trying int8 then float32 if needed...")
+            # Use saved compute_type from last successful load — skips slow detection.
+            saved_ct = _read_cached_compute_type()
+            if saved_ct:
+                compute_types = [saved_ct]
+                logger.info("Using saved compute_type=%s (from previous run)", saved_ct)
+            else:
+                compute_types = ["int8", "float32"]
+                logger.info("First run — will detect best compute_type")
 
-            # Try int8 first (fastest), fall back to float32 if int8 hangs or fails.
-            # ctranslate2 int8 requires AVX2/SSE4.2 and hangs on some CPUs silently.
             timeouts = {"int8": _INT8_TIMEOUT, "float32": _FLOAT32_TIMEOUT}
-            for compute_type in ("int8", "float32"):
-                timeout = timeouts[compute_type]
+            for compute_type in compute_types:
+                timeout = timeouts.get(compute_type, _FLOAT32_TIMEOUT)
                 load_error: list[str] = []
                 loaded_model: list[Any] = []
 
@@ -200,21 +224,24 @@ class _WindowsTranscriber(Transcriber):
                 t.join(timeout=timeout)
 
                 if t.is_alive():
-                    logger.warning(
-                        "compute_type=%s timed out after %ds — trying next",
-                        compute_type, timeout,
-                    )
-                    continue  # try next compute_type; hung thread stays as daemon
+                    logger.warning("compute_type=%s timed out after %ds — trying next", compute_type, timeout)
+                    if saved_ct:
+                        _COMPUTE_TYPE_CACHE.unlink(missing_ok=True)
+                        logger.warning("Cleared saved compute_type — will re-detect on next start")
+                    continue
 
                 if load_error:
-                    logger.warning(
-                        "compute_type=%s failed (%s) — trying next", compute_type, load_error[0]
-                    )
+                    logger.warning("compute_type=%s failed — trying next", compute_type)
+                    if saved_ct:
+                        _COMPUTE_TYPE_CACHE.unlink(missing_ok=True)
                     continue
 
                 if loaded_model:
                     self._model = loaded_model[0]
                     logger.info("Model loaded: %s (compute_type=%s)", self._model_name, compute_type)
+                    if not saved_ct:
+                        _save_cached_compute_type(compute_type)
+                        logger.info("Saved compute_type=%s — next start will be faster", compute_type)
                     break
 
             if self._model is None and self._load_error is None:
