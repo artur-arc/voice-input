@@ -1,7 +1,7 @@
 # voice-input
 
-Hold <kbd>⌘ Right Cmd</kbd>, speak, release — the transcribed text is pasted at the cursor position in any app: browser, notes, chat, code editor, any text field.
-Tap <kbd>⌥ Right Option</kbd> to cycle language modes: `ru→en` · `ru→ru` · `en→en`
+Hold <kbd>⌘ Right Cmd</kbd>, speak, release — the transcribed text is pasted at the cursor in any app: browser, notes, chat, code editor, any text field.
+A microphone icon in the menu bar gives access to all settings. <kbd>⌥ Right Option</kbd> cycles language modes as a secondary shortcut.
 
 Runs as a background launchd service on Apple Silicon Macs. Uses mlx-whisper with the
 `whisper-large-v3-mlx` model, which runs entirely on the Neural Engine.
@@ -79,10 +79,26 @@ After granting any permission, restart the service:
 | Key | Action |
 |---|---|
 | <kbd>⌘ Right Cmd</kbd> (hold → release) | Record audio, transcribe, paste |
-| <kbd>⌥ Right Option</kbd> (tap) | Cycle language modes |
+| <kbd>⌥ Right Option</kbd> (tap) | Cycle language modes (secondary) |
+
+Language mode and microphone can also be changed from the menu bar icon.
 
 Audio feedback: Tink on recording start, Pop on success, Funk on error.
 A macOS notification appears on mode change and at startup.
+
+## Menu bar
+
+A microphone icon sits in the macOS status bar. Click it for a dropdown menu:
+
+| Item | Description |
+|---|---|
+| `ru→en` / `ru→ru` / `en→en` | Language mode — radio checkmarks, one active at a time |
+| `Auto-select` / device names | Microphone — radio checkmarks, one active at a time |
+| `Version 1.0.0` | Current version (informational) |
+| `Restart to Update` | Checks GitHub for a new version; pulls and restarts automatically if found |
+| `Quit` | Stop the service |
+
+Changes take effect immediately — no restart needed for language or microphone selection.
 
 ## Language modes
 
@@ -94,32 +110,16 @@ Right Option cycles through the three modes in order:
 | `ru→ru` | `russian-russian` | Russian speech → Russian text (transcription) |
 | `en→en` | `english-english` | English speech → English text (transcription) |
 
+Mode can also be selected from the menu bar (click icon → choose mode).
+
 Note: Whisper's translate task only outputs English. A Russian-output translation mode is not
 possible with this model.
 
 ## Microphone selection
 
-[Download select_mic.command](https://github.com/artur-arc/voice-input/raw/main/select_mic.command), then double-click it in Finder. Terminal opens and lists every available microphone with its current status:
+Click the menu bar icon and select any listed device. The choice takes effect on the next recording. `Auto-select` prefers any EMEET or USB device and falls back to the system default.
 
-```text
-Voice Input — Microphone Selector
-────────────────────────────────────────
-
-Available microphones:
-
-  [0] Galaxy Buds3 (CD78)
-  [1] EMEET SmartCam S600  ← active
-  [2] MacBook Pro Microphone
-  [a] Auto-select (EMEET/USB › system default)
-
-Enter number or 'a' to auto-select [a]:
-```
-
-Enter the number of the device you want to pin, then press Enter. The choice is saved to `voice-input-config.json` and takes effect on the next recording — no restart needed.
-
-Pressing Enter without a number (or entering `a`) switches to auto-select: prefers any EMEET or USB device, falls back to the system default.
-
-Use this when connecting a Bluetooth headset or switching between multiple microphones.
+As an alternative, [download select_mic.command](https://github.com/artur-arc/voice-input/raw/main/select_mic.command) and double-click it in Finder. Terminal lists available microphones and lets you pick one interactively. The selection is saved to `voice-input-config.json`.
 
 ## Configuration
 
@@ -145,10 +145,13 @@ Pressing Right Option at runtime has the same effect and updates the file automa
 
 ## Service management
 
+`install_launchd.sh` manages two launchd agents: `com.user.voice-input` (transcription service)
+and `com.user.voice-input-menu` (menu bar app). Both start at login and are controlled together:
+
 ```bash
-./install_launchd.sh            # install and start
-./install_launchd.sh stop       # stop (restarts at next login)
-./install_launchd.sh uninstall  # remove permanently
+./install_launchd.sh            # install and start both
+./install_launchd.sh stop       # stop both (restart at next login)
+./install_launchd.sh uninstall  # remove both permanently
 ```
 
 ## Logs and troubleshooting

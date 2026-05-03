@@ -205,7 +205,8 @@ fi
 # ── 7. launchd auto-start ─────────────────────────────────────────────────────
 step "Auto-start (launchd)"
 ./install_launchd.sh install
-ok "Runs at login, starts now in background"
+ok "Voice input service started"
+ok "Menu bar app started"
 
 # ── 8. Summary ────────────────────────────────────────────────────────────────
 echo ""
@@ -222,9 +223,12 @@ echo "  Status:"
 ok "Whisper large-v3 (Apple Silicon)"
 ok "launchd auto-start"
 echo ""
-echo "  Hotkeys:"
-echo "    Right Cmd  (hold → release)  record & paste"
-echo "    Right Option (tap)           cycle mode: ru→en / ru→ru / en→en"
+echo "  Menu bar:"
+echo "    Look for the microphone icon 🎤 in the top-right status bar."
+echo "    Click it to switch language mode, select microphone, or update."
+echo ""
+echo "  Hotkey:"
+echo "    Right Cmd  (hold → release)  record speech → paste transcribed text"
 echo ""
 echo "  Config: $(pwd)/voice-input-config.json"
 echo "  Logs:   tail -f $(pwd)/voice_input.log"
