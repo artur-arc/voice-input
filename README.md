@@ -1,6 +1,7 @@
 # voice-input
 
-Hold Right Cmd, speak, release — the transcribed text gets pasted into whatever app is focused.
+Hold <kbd>⌘ Right Cmd</kbd>, speak, release — the transcribed text gets pasted into whatever app is focused.
+Tap <kbd>⌥ Right Option</kbd> to cycle language modes: `ru→en` · `ru→ru` · `en→en`
 
 Runs as a background launchd service on Apple Silicon Macs. Uses mlx-whisper with the
 `whisper-large-v3-mlx` model, which runs entirely on the Neural Engine.
@@ -32,12 +33,52 @@ agent so the service starts automatically at login.
 When the permission prompts appear, find `python` or `Terminal` in each System Settings pane
 and enable the toggle.
 
+## Permissions
+
+The installer requests three macOS permissions automatically. If a dialog was missed or a
+permission was revoked, grant it manually:
+
+**1. Microphone** — allows the app to record audio.
+
+> System Settings → Privacy & Security → Microphone
+
+If **Terminal** is not in the list:
+
+1. Click **+**
+2. Press <kbd>⌘</kbd><kbd>Shift</kbd><kbd>G</kbd> and type `/Applications/Utilities`
+3. Select **Terminal.app** → click Open
+4. Enable the toggle next to Terminal
+
+**2. Input Monitoring** — allows the app to detect hotkeys globally (even when another app is in focus).
+
+> System Settings → Privacy & Security → Input Monitoring
+
+If **Terminal** is not in the list, follow the same steps as above (click **+** → `/Applications/Utilities` → **Terminal.app**).
+
+**3. Accessibility** — allows the app to simulate <kbd>⌘V</kbd> to paste transcribed text at the cursor.
+
+> System Settings → Privacy & Security → Accessibility
+
+The service runs under Python, not Terminal. If **Python** or **python3** is not in the list:
+
+1. Click **+**
+2. Press <kbd>⌘</kbd><kbd>Shift</kbd><kbd>G</kbd> and type `~/voice-input/.venv/bin`
+3. Select **python3** → click Open
+4. Enable the toggle next to python3
+
+After granting any permission, restart the service:
+
+```bash
+./install_launchd.sh stop
+./install_launchd.sh install
+```
+
 ## Hotkeys
 
 | Key | Action |
 |---|---|
-| Right Cmd (hold → release) | Record audio, transcribe, paste into the active app |
-| Right Option | Cycle through language modes |
+| <kbd>⌘ Right Cmd</kbd> (hold → release) | Record audio, transcribe, paste |
+| <kbd>⌥ Right Option</kbd> (tap) | Cycle language modes |
 
 Audio feedback: Tink on recording start, Pop on success, Funk on error.
 A macOS notification appears on mode change and at startup.
