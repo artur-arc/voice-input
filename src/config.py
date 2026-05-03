@@ -1,4 +1,5 @@
 import json
+import logging
 import threading
 import time
 from collections.abc import Callable
@@ -6,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from modes import MODES, Mode
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigManager:
@@ -23,8 +26,8 @@ class ConfigManager:
                     with self._lock:
                         self._mode_index = i
                     return
-        except Exception as e:
-            print(f"Config load error: {e}")
+        except Exception:
+            logger.exception("Config load error")
 
     def save(self, index: int) -> None:
         try:
@@ -72,5 +75,5 @@ class ConfigManager:
                     with self._lock:
                         idx = self._mode_index
                     on_change(idx)
-            except Exception as e:
-                print(f"Watch error: {e}")
+            except Exception:
+                logger.exception("Config watch error")

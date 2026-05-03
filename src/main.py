@@ -1,4 +1,6 @@
 """Hold Right Cmd to record speech. Right Option to cycle language mode."""
+import logging
+import sys
 from pathlib import Path
 from typing import Final
 
@@ -6,10 +8,14 @@ from app import VoiceInputApp
 from audio import AudioRecorder
 from config import ConfigManager
 from feedback import UserFeedback
+from log_config import setup_logging
 from modes import MODEL_REPO
 from transcription import Transcriber
 
 CONFIG_FILE: Final[Path] = Path(__file__).parent.parent / "voice-input-config.json"
+LOG_FILE: Final[Path] = Path(__file__).parent.parent / "voice_input.log"
+
+logger = logging.getLogger(__name__)
 
 
 def main() -> None:
@@ -21,4 +27,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    setup_logging(LOG_FILE)
+    try:
+        main()
+    except Exception:
+        logger.exception("Unhandled exception in main — exiting")
+        sys.exit(1)

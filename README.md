@@ -107,9 +107,9 @@ To change the mode manually, set exactly one key to `true` and the rest to `fals
 ```json
 {
     "voiceInputConfig": {
+        "english-english": true,
         "russian-english": false,
-        "russian-russian": true,
-        "english-english": false
+        "russian-russian": false
     }
 }
 ```

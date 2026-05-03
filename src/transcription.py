@@ -1,7 +1,11 @@
+import logging
+
 import mlx_whisper
 import numpy as np
 
 from modes import MIN_RECORD_SEC, MODEL_REPO, SAMPLE_RATE, Mode
+
+logger = logging.getLogger(__name__)
 
 
 class Transcriber:
@@ -13,12 +17,17 @@ class Transcriber:
         return self._model_repo
 
     def warm_up(self) -> None:
-        mlx_whisper.transcribe(
-            np.zeros(SAMPLE_RATE, dtype=np.float32),
-            path_or_hf_repo=self._model_repo,
-            language="en",
-            verbose=False,
-        )
+        try:
+            mlx_whisper.transcribe(
+                np.zeros(SAMPLE_RATE, dtype=np.float32),
+                path_or_hf_repo=self._model_repo,
+                language="en",
+                verbose=False,
+            )
+            logger.info("Model warm-up complete: %s", self._model_repo)
+        except Exception:
+            logger.exception("Model warm-up failed for %s", self._model_repo)
+            raise
 
     def transcribe(self, audio: np.ndarray, mode: Mode) -> str | None:
         """Return transcribed text, or None if audio is too short or result is empty."""

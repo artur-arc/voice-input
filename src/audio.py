@@ -1,3 +1,4 @@
+import logging
 import threading
 from typing import Any
 
@@ -5,6 +6,8 @@ import numpy as np
 import sounddevice as sd
 
 from modes import PREFERRED_MICS, SAMPLE_RATE
+
+logger = logging.getLogger(__name__)
 
 
 class AudioRecorder:
@@ -31,9 +34,13 @@ class AudioRecorder:
                 return
             self._recording = True
             self._chunks = []
+            self._stream = None
 
             def cb(indata: np.ndarray, *_: Any) -> None:
-                self._chunks.append(indata.copy())
+                try:
+                    self._chunks.append(indata.copy())
+                except Exception:
+                    logger.exception("Audio callback error — chunk dropped")
 
             try:
                 self._stream = sd.InputStream(
@@ -46,6 +53,7 @@ class AudioRecorder:
                 self._stream.start()
             except Exception as e:
                 self._recording = False
+                self._stream = None
                 raise RuntimeError(f"Mic error: {e}") from e
 
     def stop(self) -> np.ndarray:
@@ -54,8 +62,14 @@ class AudioRecorder:
                 return np.zeros(0, dtype=np.float32)
             self._recording = False
             if self._stream is not None:
-                self._stream.stop()
-                self._stream.close()
+                try:
+                    self._stream.stop()
+                except Exception:
+                    logger.exception("Error stopping audio stream")
+                try:
+                    self._stream.close()
+                except Exception:
+                    logger.exception("Error closing audio stream")
                 self._stream = None
             chunks = self._chunks
             self._chunks = []
