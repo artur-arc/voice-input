@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-04
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`06c2c03`](https://github.com/artur-arc/voice-input/commit/06c2c035bda94dcbee4b8666b44387be8a965176) Handle transient listener failures and add SIGTERM
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`be4613a`](https://github.com/artur-arc/voice-input/commit/be4613a3ba8e57e21254be760bd89ce819125fa2) Handle transient listener failures and add SIGTERM
 
 ## v1.0.51 — 2026-05-04
 ### 2026-05-04
