@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-04
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`1a5531e`](https://github.com/artur-arc/voice-input/commit/1a5531e9f6365e6d8ce0ea7bde06125c6a140a38) Adjust model detection thresholds for better
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`64c72d4`](https://github.com/artur-arc/voice-input/commit/64c72d467f3673eeeb2f8c4df43789811201de85) Adjust model detection thresholds for better
 
 ## v1.0.48 — 2026-05-04
 ### 2026-05-04
