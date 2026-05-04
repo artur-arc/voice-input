@@ -397,7 +397,6 @@ class VoiceInputTray:
                 except Exception:
                     logger.warning("Clipboard copy failed — text lost")
             self._feedback.play("Tink")
-            self._feedback.notify("Voice Input", text[:80])
         except Exception:
             logger.exception("Transcription/paste failed")
             self._feedback.play("Funk")

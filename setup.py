@@ -57,12 +57,12 @@ def _detect_win_model() -> str:
     except Exception:
         total_gb = 0.0
 
-    if total_gb >= 16:
+    if total_gb >= 14:
         return "large-v3"   # GGML ~3.1 GB
-    elif total_gb >= 7:
+    elif total_gb >= 4:
         return "medium"     # GGML ~1.5 GB
     else:
-        return "tiny"       # GGML ~75 MB
+        return "tiny"       # GGML ~75 MB — RAM detection failed or genuinely low
 
 
 

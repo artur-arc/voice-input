@@ -53,9 +53,9 @@ def _detect_win_model() -> str:
     except Exception:
         total_gb = 0.0
 
-    if total_gb >= 16:
+    if total_gb >= 14:
         return "large-v3"
-    elif total_gb >= 7:
+    elif total_gb >= 4:
         return "medium"
     else:
         return "tiny"
