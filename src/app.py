@@ -72,7 +72,15 @@ class VoiceInputApp:
                     on_release=self._on_release,
                 ) as listener:
                     listener.join()
-                return  # clean exit
+                # listener.join() returned without exception — pynput stopped the
+                # event tap (e.g. Accessibility revoked during launchd restart).
+                # Treat as a transient failure and restart.
+                attempts += 1
+                logger.warning(
+                    "Keyboard listener stopped unexpectedly (attempt %d/%d) — restarting",
+                    attempts,
+                    _LISTENER_MAX_RESTARTS,
+                )
             except Exception:
                 attempts += 1
                 logger.exception(
@@ -80,8 +88,8 @@ class VoiceInputApp:
                     attempts,
                     _LISTENER_MAX_RESTARTS,
                 )
-                if attempts < _LISTENER_MAX_RESTARTS:
-                    time.sleep(_LISTENER_RESTART_DELAY)
+            if attempts < _LISTENER_MAX_RESTARTS:
+                time.sleep(_LISTENER_RESTART_DELAY)
         logger.error(
             "Keyboard listener failed %d times — giving up", _LISTENER_MAX_RESTARTS
         )

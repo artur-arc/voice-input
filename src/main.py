@@ -6,6 +6,7 @@ os.environ.setdefault("TQDM_DISABLE", "1")
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 
 import logging
+import signal
 import sys
 from pathlib import Path
 from typing import Final
@@ -40,6 +41,13 @@ if __name__ == "__main__":
     # macOS/launchd: stdout already captured — no extra file handler needed
     # Windows/pythonw.exe: stdout is null — must log to file
     setup_logging(LOG_FILE if (sys.platform == "win32" or sys.stdout.isatty()) else None)
+
+    def _sigterm_handler(signum: int, frame: object) -> None:
+        logger.info("=== Voice Input received SIGTERM (pid=%d) — exiting ===", os.getpid())
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, _sigterm_handler)
+
     logger.info("=== Voice Input starting (pid=%d) ===", os.getpid())
     try:
         main()

@@ -121,6 +121,16 @@ unload_menu_agent() {
     launchctl bootout "$DOMAIN/$MENU_LABEL" 2>/dev/null || launchctl unload "$MENU_PLIST_DST" 2>/dev/null || true
 }
 
+# Wait up to 15s for a service to fully stop (disappear from launchctl list)
+wait_until_stopped() {
+    local label="$1"
+    local i=0
+    while [ $i -lt 15 ]; do
+        launchctl list "$label" &>/dev/null || return 0
+        sleep 1; i=$((i+1))
+    done
+}
+
 # Wait up to 8s for a service to appear in launchctl list, retry bootstrap once if needed
 wait_for_service() {
     local label="$1" plist="$2" name="$3"
@@ -142,8 +152,8 @@ case "${1:-install}" in
   install)
     generate_plist
     generate_menu_plist
-    unload_agent;      load_agent
-    unload_menu_agent; load_menu_agent
+    unload_agent;      wait_until_stopped "$LABEL";      load_agent
+    unload_menu_agent; wait_until_stopped "$MENU_LABEL"; load_menu_agent
     wait_for_service "$LABEL"      "$PLIST_DST"      "Voice input started"
     wait_for_service "$MENU_LABEL" "$MENU_PLIST_DST" "Menu bar started"
     echo "  Logs: $DIR/voice_input.log | $DIR/menu_bar.log"
