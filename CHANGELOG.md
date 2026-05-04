@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-04
-- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`68140af`](https://github.com/artur-arc/voice-input/commit/68140af39e9e8edb85a7e1f0b650b64454a9fe36) Resolve model path and prevent network
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`6762426`](https://github.com/artur-arc/voice-input/commit/676242691fca97fe68124ff01433b48109d7b3e5) Resolve model path and prevent network
 
 ## v1.0.44 — 2026-05-04
 ### 2026-05-04
