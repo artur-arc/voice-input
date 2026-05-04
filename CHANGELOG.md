@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-04
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`8df07b7`](https://github.com/artur-arc/voice-input/commit/8df07b7babe075b263d62e1eeb2bb0335ea8c3d5) Extend model support on Windows
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`34fa533`](https://github.com/artur-arc/voice-input/commit/34fa53364a0d5f453c1469f021245516e0bce3c2) Extend model support on Windows
 
 ## v1.0.41 — 2026-05-03
 ### 2026-05-03
