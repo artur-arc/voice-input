@@ -83,6 +83,9 @@ class Transcriber(ABC):
         """Return True when the model is loaded and ready to transcribe."""
         return True
 
+    def shutdown(self) -> None:
+        """Release resources before process exit. No-op on macOS."""
+
     @abstractmethod
     def warm_up(self) -> None: ...
 
@@ -249,16 +252,22 @@ class _WindowsTranscriber(Transcriber):
         if not self._ready.is_set():
             logger.info("Waiting for worker to load...")
             self._ready.wait()
-        if self._proc is None:
-            logger.error("Worker unavailable: %s", self._load_error)
-            return None
-        if self._proc.poll() is not None:
-            logger.error("Worker process has exited unexpectedly (rc=%d)", self._proc.returncode)
-            return None
 
         with self._io_lock:
+            # Re-check inside lock — state may have changed while waiting
+            if self._proc is None:
+                logger.error("Worker unavailable: %s", self._load_error)
+                return None
+            if self._proc.poll() is not None:
+                rc = self._proc.returncode
+                logger.error("Worker exited unexpectedly (rc=%d) — restarting", rc)
+                self._proc = None
+                self._ready.clear()
+                threading.Thread(target=self.warm_up, daemon=True).start()
+                return None
+            if not self._proc.stdin or not self._proc.stdout:
+                return None
             try:
-                assert self._proc.stdin and self._proc.stdout
                 self._proc.stdin.write(struct.pack(">I", len(audio)))
                 self._proc.stdin.write(audio.astype(np.float32).tobytes())
                 self._proc.stdin.flush()
@@ -267,9 +276,13 @@ class _WindowsTranscriber(Transcriber):
                 self._ws(self._proc, self._initial_prompt(mode.language))
                 result = self._rs(self._proc, timeout=_TRANSCRIBE_TIMEOUT)
                 if result is None:
-                    logger.warning("Transcription timed out — killing worker")
+                    logger.warning(
+                        "Transcription timed out after %ds — killing worker, switching to tiny",
+                        _TRANSCRIBE_TIMEOUT,
+                    )
                     self._terminate(self._proc)
                     self._proc = None
+                    self._ready.clear()  # block callers until fallback is ready
                     if self._model_name != "tiny":
                         threading.Thread(target=self._switch_to_tiny, daemon=True).start()
                     return None
@@ -283,9 +296,19 @@ class _WindowsTranscriber(Transcriber):
     @staticmethod
     def _ws(proc: "subprocess.Popen[bytes]", s: str) -> None:
         b = s.encode("utf-8")
-        assert proc.stdin
+        if not proc.stdin:
+            raise OSError("Worker stdin closed")
         proc.stdin.write(struct.pack(">H", len(b)) + b)
         proc.stdin.flush()
+
+    def shutdown(self) -> None:
+        if self._proc is not None:
+            self._terminate(self._proc)
+            try:
+                self._proc.wait(timeout=3)
+            except Exception:
+                pass
+            self._proc = None
 
     # ── Model fallback ────────────────────────────────────────────────────────
 
@@ -294,9 +317,11 @@ class _WindowsTranscriber(Transcriber):
         self._model_name = "tiny"
         self._model_path = str(_MODELS_DIR / "ggml-tiny.bin")
         self._load_error = None
-        self._ready.clear()
+        # _ready was already cleared by transcribe() before this thread was spawned
         logger.warning("Model fallback: %s → tiny (CPU too slow for primary model)", prev)
         self.warm_up()
+        if self._load_error:
+            logger.error("Tiny model fallback also failed: %s", self._load_error)
 
     # ── IPC helpers ───────────────────────────────────────────────────────────
 

@@ -162,7 +162,7 @@ def download_model() -> None:
             )
             tmp_file = model_file.with_suffix(".tmp")
 
-            def _progress(count: int, block: int, total: int) -> None:
+            def _progress(count: int, block: int, total: int, _f: Path = tmp_file) -> None:
                 if total > 0:
                     pct = min(100, count * block * 100 // total)
                     print(f"\r  {pct}%", end="", flush=True)

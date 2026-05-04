@@ -586,11 +586,20 @@ class VoiceInputTray:
             logger.info("Process restarted")
 
     def _on_uninstall(self, icon: Any, item: Any) -> None:
+        models_dir = self._repo_dir / "models"
+        model_size_mb = 0.0
+        if models_dir.exists():
+            model_size_mb = sum(
+                f.stat().st_size for f in models_dir.glob("*.bin") if f.is_file()
+            ) / 1_048_576
+        model_info = f"\n• Whisper model cache ({model_size_mb:.0f} MB)" if model_size_mb > 0 else ""
+
         confirmed = ctypes.windll.user32.MessageBoxW(
             0,
             f"This will permanently remove:\n"
-            f"• Startup entry\n"
-            f"• App folder (models included): {self._repo_dir}\n\n"
+            f"• Startup entry"
+            f"{model_info}"
+            f"\n• App folder: {self._repo_dir}\n\n"
             f"Continue?",
             "Uninstall Voice Input",
             0x04 | 0x30,  # MB_YESNO | MB_ICONWARNING
@@ -605,17 +614,31 @@ class VoiceInputTray:
         )
         (startup / "voice-input.bat").unlink(missing_ok=True)
 
-        # Delete the app folder after the process exits via a detached batch script
+        # Terminate the worker subprocess so it releases the model .bin file lock.
+        # Windows does not kill child processes automatically when the parent exits,
+        # so rmdir /s /q would fail to delete an open .bin file without this.
+        self._transcriber.shutdown()
+
+        # Delete the app folder after the tray process exits via a detached batch script.
+        # Extra 2-second wait after PID disappears lets OS release any remaining file handles.
+        # Retry loop (up to 5 attempts) handles transient locks from the dying venv.
         repo = str(self._repo_dir)
         pid = os.getpid()
         fd, tmp_path = tempfile.mkstemp(suffix=".bat", prefix="vi_uninstall_")
         os.close(fd)
         Path(tmp_path).write_text(
             "@echo off\n"
-            f":wait\n"
-            f"tasklist /fi \"pid eq {pid}\" 2>nul | find \"{pid}\" >nul\n"
-            f"if not errorlevel 1 (timeout /t 1 /nobreak >nul & goto wait)\n"
-            f"rmdir /s /q \"{repo}\"\n"
+            ":wait\n"
+            f"tasklist /fi \"PID eq {pid}\" 2>nul | find \"{pid}\" >nul\n"
+            "if not errorlevel 1 (timeout /t 1 /nobreak >nul & goto wait)\n"
+            "timeout /t 2 /nobreak >nul\n"
+            "set retries=5\n"
+            ":retry\n"
+            f"rmdir /s /q \"{repo}\" 2>nul\n"
+            f"if not exist \"{repo}\" goto done\n"
+            "set /a retries-=1\n"
+            "if %retries% gtr 0 (timeout /t 2 /nobreak >nul & goto retry)\n"
+            ":done\n"
             "del \"%~f0\"\n",
             encoding="utf-8",
         )
@@ -627,6 +650,7 @@ class VoiceInputTray:
 
     def _on_quit(self, icon: Any, item: Any) -> None:
         logger.info("Quit requested via menu")
+        self._transcriber.shutdown()
         icon.stop()
 
 

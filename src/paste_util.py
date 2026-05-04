@@ -88,10 +88,14 @@ def _win_restore_focus(hwnd: int) -> None:
         tgt_thread = user32.GetWindowThreadProcessId(hwnd, None)
         if cur_thread != tgt_thread:
             user32.AttachThreadInput(cur_thread, tgt_thread, True)
-        user32.SetForegroundWindow(hwnd)
-        user32.BringWindowToTop(hwnd)
-        if cur_thread != tgt_thread:
-            user32.AttachThreadInput(cur_thread, tgt_thread, False)
+            try:
+                user32.SetForegroundWindow(hwnd)
+                user32.BringWindowToTop(hwnd)
+            finally:
+                user32.AttachThreadInput(cur_thread, tgt_thread, False)
+        else:
+            user32.SetForegroundWindow(hwnd)
+            user32.BringWindowToTop(hwnd)
         time.sleep(0.05)
     except Exception:
         pass
@@ -132,6 +136,8 @@ def _win_write_clipboard(text: str) -> None:
     k32.GlobalLock.restype = ctypes.c_void_p
     k32.GlobalLock.argtypes = [ctypes.c_void_p]
     k32.GlobalUnlock.argtypes = [ctypes.c_void_p]
+    k32.GlobalFree.restype = ctypes.c_void_p
+    k32.GlobalFree.argtypes = [ctypes.c_void_p]
     u32.SetClipboardData.restype = ctypes.c_void_p
     u32.SetClipboardData.argtypes = [ctypes.c_uint, ctypes.c_void_p]
 
@@ -141,6 +147,7 @@ def _win_write_clipboard(text: str) -> None:
         raise OSError("GlobalAlloc failed")
     ptr = k32.GlobalLock(h)
     if not ptr:
+        k32.GlobalFree(h)
         raise OSError("GlobalLock failed")
     ctypes.memmove(ptr, encoded, len(encoded))
     k32.GlobalUnlock(h)
