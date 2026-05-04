@@ -463,6 +463,14 @@ class VoiceInputTray:
             ))
         items.append(pystray.MenuItem("Microphone", pystray.Menu(*mic_items), default=False))
 
+        # Model (informational)
+        model_name = self._transcriber.model_repo
+        items.append(pystray.MenuItem(
+            "Model",
+            pystray.Menu(pystray.MenuItem(model_name, None, enabled=False)),
+            default=False,
+        ))
+
         items.append(pystray.Menu.SEPARATOR)
 
         # Permissions submenu (informational — opens Windows Settings)

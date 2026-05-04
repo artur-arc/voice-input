@@ -20,7 +20,7 @@ sys.path.insert(0, str(_SRC_DIR))
 
 from config import ConfigManager  # noqa: E402
 from log_config import setup_logging  # noqa: E402
-from modes import MODES  # noqa: E402
+from modes import MODEL_REPO, MODES  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -258,6 +258,13 @@ class VoiceInputMenuBar(rumps.App):
         mic_menu = rumps.MenuItem("Microphone")
         mic_menu.update(mic_items)
         items.append(mic_menu)
+
+        # ── Model (informational) ─────────────────────────────────────────────
+        model_label = MODEL_REPO.split("/")[-1]
+        model_item = rumps.MenuItem(model_label)
+        model_menu = rumps.MenuItem("Model")
+        model_menu.update([model_item])
+        items.append(model_menu)
 
         items.append(None)
 
