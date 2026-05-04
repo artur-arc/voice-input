@@ -441,23 +441,26 @@ class VoiceInputTray:
 
         items.append(pystray.Menu.SEPARATOR)
 
-        # Microphone devices (radio)
-        items.append(pystray.MenuItem(
-            "Auto-select",
-            lambda icon, item: self._on_device(None),
-            checked=lambda item: self._config.input_device() is None,
-            radio=True,
-            default=False,
-        ))
+        # Microphone devices (submenu with radio)
+        mic_items: list[Any] = [
+            pystray.MenuItem(
+                "Auto-select",
+                lambda icon, item: self._on_device(None),
+                checked=lambda item: self._config.input_device() is None,
+                radio=True,
+                default=False,
+            )
+        ]
         for _idx, name in devices:
             _n = name
-            items.append(pystray.MenuItem(
+            mic_items.append(pystray.MenuItem(
                 _n,
                 (lambda n: lambda icon, item: self._on_device(n))(_n),
                 checked=(lambda n: lambda item: self._config.input_device() == n)(_n),
                 radio=True,
                 default=False,
             ))
+        items.append(pystray.MenuItem("Microphone", pystray.Menu(*mic_items), default=False))
 
         items.append(pystray.Menu.SEPARATOR)
 

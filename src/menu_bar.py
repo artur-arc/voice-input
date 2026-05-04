@@ -243,15 +243,21 @@ class VoiceInputMenuBar(rumps.App):
 
         items.append(None)
 
-        # ── Microphone devices ────────────────────────────────────────────────
+        # ── Microphone devices (submenu) ──────────────────────────────────────
+        mic_items: list[Any] = []
+
         auto = rumps.MenuItem("Auto-select", callback=self._on_device)
         auto.state = 1 if configured_device is None else 0
-        items.append(auto)
+        mic_items.append(auto)
 
         for _idx, name in devices:
             item = rumps.MenuItem(name, callback=self._on_device)
             item.state = 1 if name == configured_device else 0
-            items.append(item)
+            mic_items.append(item)
+
+        mic_menu = rumps.MenuItem("Microphone")
+        mic_menu.update(mic_items)
+        items.append(mic_menu)
 
         items.append(None)
 
