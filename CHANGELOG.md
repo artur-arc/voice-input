@@ -3,6 +3,11 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-04
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`9d5f331`](https://github.com/artur-arc/voice-input/commit/9d5f331155f943d1303cb713628e72c937021d00) Replace direct keyboard control with library
+
+## v1.0.47 — 2026-05-04
+### 2026-05-04
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`32f09c4`](https://github.com/artur-arc/voice-input/commit/32f09c4998f3936735ccb122eea239da68a080e6) Release v1.0.47
 - ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`6679b02`](https://github.com/artur-arc/voice-input/commit/6679b0243074488ab57afc12498219262af7d4e1) Add target window parameter for paste_text function
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`8bb3885`](https://github.com/artur-arc/voice-input/commit/8bb3885a81e0c76ab1b82d5e533e2c9d25b5ad99) Reorganize microphone device options into
 

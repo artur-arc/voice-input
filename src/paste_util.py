@@ -98,10 +98,11 @@ def _win_restore_focus(hwnd: int) -> None:
 
 
 def _win_paste(text: str, target_hwnd: int = 0) -> bool:
+    import keyboard as _kbd  # type: ignore[import]
     try:
         _win_write_clipboard(text)
         _win_restore_focus(target_hwnd)
-        _win_send_ctrl_v()
+        _kbd.send('ctrl+v')
         return True
     except Exception:
         logger.warning("Ctrl+V paste failed — trying pyperclip fallback")
@@ -109,10 +110,10 @@ def _win_paste(text: str, target_hwnd: int = 0) -> bool:
         import pyperclip
         pyperclip.copy(text)
         _win_restore_focus(target_hwnd)
-        _win_send_ctrl_v()
+        _kbd.send('ctrl+v')
         return True
     except Exception:
-        logger.warning("pyperclip fallback failed — trying keyboard.write()")
+        logger.warning("pyperclip paste failed — trying keyboard.write()")
     return _win_keyboard_write(text)
 
 
@@ -164,34 +165,3 @@ def _win_keyboard_write(text: str) -> bool:
         return False
 
 
-def _win_send_ctrl_v() -> None:
-    from ctypes import wintypes
-
-    INPUT_KEYBOARD  = 1
-    KEYEVENTF_KEYUP = 0x0002
-    VK_CONTROL      = 0x11
-    VK_V            = 0x56
-
-    class _KEYBDINPUT(ctypes.Structure):
-        _fields_ = [
-            ("wVk",        wintypes.WORD),
-            ("wScan",      wintypes.WORD),
-            ("dwFlags",    wintypes.DWORD),
-            ("time",       wintypes.DWORD),
-            ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong)),
-        ]
-
-    class _INPUT(ctypes.Structure):
-        class _I(ctypes.Union):
-            _fields_ = [("ki", _KEYBDINPUT)]
-        _anonymous_ = ("_i",)
-        _fields_ = [("type", wintypes.DWORD), ("_i", _I)]
-
-    inputs = [
-        _INPUT(type=INPUT_KEYBOARD, ki=_KEYBDINPUT(wVk=VK_CONTROL)),
-        _INPUT(type=INPUT_KEYBOARD, ki=_KEYBDINPUT(wVk=VK_V)),
-        _INPUT(type=INPUT_KEYBOARD, ki=_KEYBDINPUT(wVk=VK_V,        dwFlags=KEYEVENTF_KEYUP)),
-        _INPUT(type=INPUT_KEYBOARD, ki=_KEYBDINPUT(wVk=VK_CONTROL,  dwFlags=KEYEVENTF_KEYUP)),
-    ]
-    n = len(inputs)
-    ctypes.windll.user32.SendInput(n, (_INPUT * n)(*inputs), ctypes.sizeof(_INPUT))
