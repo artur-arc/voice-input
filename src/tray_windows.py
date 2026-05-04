@@ -478,18 +478,21 @@ class VoiceInputTray:
 
         items.append(pystray.Menu.SEPARATOR)
 
-        items.append(pystray.MenuItem(
-            "Sound Effects",
-            lambda *_: self._on_toggle_sounds(),
-            checked=lambda _: self._config.sounds_enabled(),
-            default=False,
-        ))
-        items.append(pystray.MenuItem(
-            "Notifications",
-            lambda *_: self._on_toggle_notifications(),
-            checked=lambda _: self._config.notifications_enabled(),
-            default=False,
-        ))
+        settings_items = [
+            pystray.MenuItem(
+                "Sound Effects",
+                lambda *_: self._on_toggle_sounds(),
+                checked=lambda _: self._config.sounds_enabled(),
+                default=False,
+            ),
+            pystray.MenuItem(
+                "Notifications",
+                lambda *_: self._on_toggle_notifications(),
+                checked=lambda _: self._config.notifications_enabled(),
+                default=False,
+            ),
+        ]
+        items.append(pystray.MenuItem("Settings", pystray.Menu(*settings_items), default=False))
 
         items.append(pystray.Menu.SEPARATOR)
 

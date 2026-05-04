@@ -266,14 +266,14 @@ class VoiceInputMenuBar(rumps.App):
 
         items.append(None)
 
-        # ── Sound & Notifications toggles ─────────────────────────────────────
+        # ── Settings submenu ──────────────────────────────────────────────────
         sounds_item = rumps.MenuItem("Sound Effects", callback=self._on_toggle_sounds)
         sounds_item.state = 1 if self._config.sounds_enabled() else 0
-        items.append(sounds_item)
-
         notif_item = rumps.MenuItem("Notifications", callback=self._on_toggle_notifications)
         notif_item.state = 1 if self._config.notifications_enabled() else 0
-        items.append(notif_item)
+        settings_menu = rumps.MenuItem("Settings")
+        settings_menu.update([sounds_item, notif_item])
+        items.append(settings_menu)
 
         items.append(None)
 
