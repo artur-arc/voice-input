@@ -2,6 +2,7 @@
 import os
 import struct
 import sys
+from pathlib import Path
 
 # Must be set before ctranslate2 is imported.
 os.environ.setdefault("OMP_NUM_THREADS", "1")
@@ -10,6 +11,11 @@ os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 os.environ.setdefault("CT2_FORCE_CPU_ISA", "GENERIC")
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 os.environ.setdefault("CT2_VERBOSE", "1")
+# Prevent huggingface_hub from making network calls inside WhisperModel().
+# Without this, HF Hub attempts a remote HEAD request that can time out after
+# ~3 minutes on machines with restricted network access, causing the process
+# to hang and eventually crash with 0xC0000005.
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
 
 import numpy as np  # noqa: E402 — after env vars
 
@@ -32,11 +38,29 @@ def _log(msg: str) -> None:
     print(msg, file=sys.stderr, flush=True)
 
 
+def _resolve_model_path(model_name: str) -> str:
+    """Return local HF snapshot dir for the model, or model_name as fallback."""
+    if hf_home := os.environ.get("HF_HOME"):
+        cache = Path(hf_home) / "hub"
+    elif hf_cache := os.environ.get("HUGGINGFACE_HUB_CACHE"):
+        cache = Path(hf_cache)
+    else:
+        cache = Path.home() / ".cache" / "huggingface" / "hub"
+    snapshots_dir = cache / f"models--Systran--faster-whisper-{model_name}" / "snapshots"
+    if snapshots_dir.exists():
+        dirs = sorted(snapshots_dir.iterdir())
+        if dirs:
+            return str(dirs[0])
+    return model_name
+
+
 def main() -> None:
     model_name = _rs()
     compute_type = _rs()
 
+    model_path = _resolve_model_path(model_name)
     _log(f"WORKER: start model={model_name} compute_type={compute_type}")
+    _log(f"WORKER: resolved path={model_path}")
 
     try:
         import ctranslate2 as _ct2  # type: ignore[import]
@@ -56,11 +80,12 @@ def main() -> None:
     _log("WORKER: calling WhisperModel()")
     try:
         model = WhisperModel(
-            model_name,
+            model_path,
             device="cpu",
             compute_type=compute_type,
             cpu_threads=1,
             num_workers=1,
+            local_files_only=True,
         )
         _log("WORKER: WhisperModel() OK")
         _ws("READY")

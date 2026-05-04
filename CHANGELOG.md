@@ -3,6 +3,11 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-04
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`68140af`](https://github.com/artur-arc/voice-input/commit/68140af39e9e8edb85a7e1f0b650b64454a9fe36) Resolve model path and prevent network
+
+## v1.0.44 — 2026-05-04
+### 2026-05-04
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`3b9dfeb`](https://github.com/artur-arc/voice-input/commit/3b9dfeb316ba3dee2b4ae53b4df076981ac0c168) Release v1.0.44
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`47ac434`](https://github.com/artur-arc/voice-input/commit/47ac434bce65e94cc71dda033d28188f736eb3d1) Update faster-whisper version and add hebrew modes
 
 ## v1.0.43 — 2026-05-04
