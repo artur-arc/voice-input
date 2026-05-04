@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-04
-- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`689ca2a`](https://github.com/artur-arc/voice-input/commit/689ca2ab905c10a01ea43cc8ee73e36724a949f5) Add model information menu item
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`4056a33`](https://github.com/artur-arc/voice-input/commit/4056a33a97fe69567239f17b71ddfca9d6f3b9a8) Add model information menu item
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`ce437ac`](https://github.com/artur-arc/voice-input/commit/ce437ac914335fe9b0e181cf6e5212c124352c6e) Update model selection and download logic
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`2c2569a`](https://github.com/artur-arc/voice-input/commit/2c2569a395acca8ef5a56bb1921ebdac8264d982) Group sound and notifications under
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`3470c6d`](https://github.com/artur-arc/voice-input/commit/3470c6d50b37675f4e9408ba5e87c4bd431f3731) Update voice input configurations
