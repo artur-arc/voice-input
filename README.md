@@ -107,39 +107,41 @@ A macOS notification appears on mode change and at startup.
 
 ## Menu bar
 
-A microphone icon sits in the macOS status bar. Click it for a dropdown menu:
+A microphone icon sits in the menu bar (macOS) or system tray (Windows). Click it for a dropdown menu.
+
+### macOS menu items
 
 | Item | Description |
 |---|---|
-| `ru→en` / `ru→ru` / `en→en` | Language mode — radio checkmarks, one active at a time |
-| `Auto-select` / device names | Microphone — radio checkmarks, one active at a time |
-| `Permissions` | Shows grant status for Microphone, Input Monitoring, and Accessibility; click any item to open the relevant System Settings panel |
-| `Version 1.0.0` | Current version (informational) |
-| `Restart to Update` | Checks GitHub for a new version; pulls and restarts automatically if found |
-| `Quit` | Stop the service |
-
-Changes take effect immediately — no restart needed for language or microphone selection.
+| `ru→en` / `ru→ru` / `en→en` / `he→en` / `he→he` | Language mode — radio, one active at a time; title bar reflects current mode |
+| **Microphone** submenu | `Auto-select` plus listed device names — radio, one active at a time |
+| **Model** submenu | Current model name (informational; fixed to `whisper-large-v3-mlx` on macOS) |
+| **Permissions** submenu | Shows granted (checkmark) or denied status for Microphone, Input Monitoring, and Accessibility; click any item to open the relevant System Settings panel; also shows the python3 binary path that needs the permissions |
+| **Settings** submenu | Sound Effects toggle, Notifications toggle |
+| `Version 1.0.x` | Current version — click opens the GitHub page |
+| `Restart to Update` | Checks GitHub for a newer version; runs `git pull` + `pip install` + service restart if one is found; shows "Working…" while in progress |
+| `Uninstall…` | Shows a confirmation dialog listing what will be removed (service, model cache, app folder), then removes everything |
+| `Quit` | Stops the menu bar app and service |
 
 ## Language modes
 
-Right Option cycles through the three modes in order:
+Right Option cycles through the five modes in order:
 
 | Mode | Config key | What it does |
 |---|---|---|
 | `ru→en` | `russian-english` | Russian speech → English text (Whisper translation) |
 | `ru→ru` | `russian-russian` | Russian speech → Russian text (transcription) |
 | `en→en` | `english-english` | English speech → English text (transcription) |
+| `he→en` | `hebrew-english` | Hebrew speech → English text (Whisper translation) |
+| `he→he` | `hebrew-hebrew` | Hebrew speech → Hebrew text (transcription) |
 
 Mode can also be selected from the menu bar (click icon → choose mode).
 
-Note: Whisper's translate task only outputs English. A Russian-output translation mode is not
-possible with this model.
+Note: Whisper's translate task only outputs English.
 
 ## Microphone selection
 
-Click the menu bar icon and select any listed device. The choice takes effect on the next recording. `Auto-select` prefers any EMEET or USB device and falls back to the system default.
-
-As an alternative, [download select_mic.command](https://raw.githubusercontent.com/artur-arc/voice-input/main/select_mic.command) *(if it opens as text in your browser, right-click the link → Save Link As)* and double-click it in Finder. Terminal lists available microphones and lets you pick one interactively. The selection is saved to `voice-input-config.json`.
+Click the menu bar icon and select any listed device. The choice takes effect on the next recording. `Auto-select` prefers any USB device and falls back to the system default.
 
 ## Configuration
 
@@ -153,7 +155,9 @@ To change the mode manually, set exactly one key to `true` and the rest to `fals
     "voiceInputConfig": {
         "english-english": true,
         "russian-english": false,
-        "russian-russian": false
+        "russian-russian": false,
+        "hebrew-english": false,
+        "hebrew-hebrew": false
     },
     "input_device": null
 }

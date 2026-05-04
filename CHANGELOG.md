@@ -3,6 +3,11 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-04
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`bcba6b8`](https://github.com/artur-arc/voice-input/commit/bcba6b8a830b48114c2ec118c487362f1cab1cd7) Update README and config for new Hebrew modes
+
+## v1.0.52 — 2026-05-04
+### 2026-05-04
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`c0603f5`](https://github.com/artur-arc/voice-input/commit/c0603f57835d821b0ca6377b47781105a9e4f6f0) Release v1.0.52
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`be4613a`](https://github.com/artur-arc/voice-input/commit/be4613a3ba8e57e21254be760bd89ce819125fa2) Handle transient listener failures and add SIGTERM
 
 ## v1.0.51 — 2026-05-04
