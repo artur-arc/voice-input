@@ -3,6 +3,11 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-04
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`8578c71`](https://github.com/artur-arc/voice-input/commit/8578c7108000472a9a92258003c65b11da0b4dc6) Replace faster-whisper with pywhispercpp for
+
+## v1.0.45 — 2026-05-04
+### 2026-05-04
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`da7313d`](https://github.com/artur-arc/voice-input/commit/da7313d611876959165535e89119f8b70c330248) Release v1.0.45
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`6762426`](https://github.com/artur-arc/voice-input/commit/676242691fca97fe68124ff01433b48109d7b3e5) Resolve model path and prevent network
 
 ## v1.0.44 — 2026-05-04

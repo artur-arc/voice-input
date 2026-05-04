@@ -138,38 +138,17 @@ class _MacTranscriber(Transcriber):
         return result["text"].strip() or None
 
 
-_PROBE_TIMEOUT = 300  # seconds per compute_type probe in worker subprocess
-
-# Cache file: stores the compute_type that worked last time so future starts skip detection
-_COMPUTE_TYPE_CACHE = Path(__file__).parent.parent / ".ct2_compute_type"
+_LOAD_TIMEOUT = 60  # seconds to wait for worker to signal READY
+_MODELS_DIR = Path(__file__).parent.parent / "models"
 _WORKER_SCRIPT = Path(__file__).parent / "transcription_worker.py"
 
 
-def _read_cached_compute_type() -> str | None:
-    try:
-        ct = _COMPUTE_TYPE_CACHE.read_text(encoding="utf-8").strip()
-        return ct if ct in ("int8", "float32") else None
-    except Exception:
-        return None
-
-
-def _save_cached_compute_type(ct: str) -> None:
-    try:
-        _COMPUTE_TYPE_CACHE.write_text(ct, encoding="utf-8")
-    except Exception:
-        pass
-
-
 class _WindowsTranscriber(Transcriber):
-    """faster-whisper backend — runs ctranslate2 in an isolated subprocess.
-
-    ctranslate2 can crash with STATUS_ACCESS_VIOLATION (0xC0000005) on some CPUs,
-    killing the whole Python process. Running it in a subprocess confines any native
-    crash to the child, keeping the tray process alive.
-    """
+    """pywhispercpp (whisper.cpp) backend — no ctranslate2, runs in isolated subprocess."""
 
     def __init__(self, model_repo: str = MODEL_REPO) -> None:
         self._model_name = _detect_win_model()
+        self._model_path = str(_MODELS_DIR / f"ggml-{self._model_name}.bin")
         self._proc: subprocess.Popen[bytes] | None = None
         self._ready = threading.Event()
         self._load_error: str | None = None
@@ -185,83 +164,27 @@ class _WindowsTranscriber(Transcriber):
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
-    @staticmethod
-    def _hf_cache_dir() -> Path:
-        if hf_home := os.environ.get("HF_HOME"):
-            return Path(hf_home) / "hub"
-        if hf_cache := os.environ.get("HUGGINGFACE_HUB_CACHE"):
-            return Path(hf_cache)
-        return Path.home() / ".cache" / "huggingface" / "hub"
-
     def warm_up(self) -> None:
         try:
-            cache_dir = self._hf_cache_dir()
-            model_dir = cache_dir / f"models--Systran--faster-whisper-{self._model_name}"
-            logger.info("HF cache dir: %s", cache_dir)
-            logger.info("Checking model cache: %s", model_dir)
+            model_file = Path(self._model_path)
+            logger.info("Checking model: %s", model_file)
 
-            if not model_dir.exists():
+            if not model_file.exists():
                 self._load_error = (
-                    f"Model not found at {model_dir}. Re-run setup.py to download it."
+                    f"Model not found at {model_file}. Re-run install.bat to download it."
                 )
                 logger.error(self._load_error)
                 return
 
-            # Validate model.bin — ctranslate2 crashes with 0xC0000005 on corrupted files.
-            _EXPECTED_MIN_MB = {"tiny": 40, "small": 200, "medium": 400, "large-v3": 1400}
-            model_bins = sorted(model_dir.glob("**/model.bin"))
-            if not model_bins:
-                self._load_error = (
-                    f"model.bin not found inside {model_dir}. "
-                    "Files may be incomplete — delete the directory and re-run setup.py."
-                )
-                logger.error(self._load_error)
-                return
-            model_bin_mb = model_bins[0].stat().st_size / 1_048_576
-            min_mb = _EXPECTED_MIN_MB.get(self._model_name, 100)
-            logger.info("model.bin: %.1f MB (expected >= %d MB)", model_bin_mb, min_mb)
-            if model_bin_mb < min_mb:
-                self._load_error = (
-                    f"model.bin is {model_bin_mb:.1f} MB — expected >= {min_mb} MB. "
-                    f"Files are corrupted or incomplete. "
-                    f"Delete {model_dir} and re-run setup.py to re-download."
-                )
-                logger.error(self._load_error)
-                return
+            size_mb = model_file.stat().st_size / 1_048_576
+            logger.info("Model size: %.1f MB", size_mb)
 
-            saved_ct = _read_cached_compute_type()
-            if saved_ct:
-                compute_types = [saved_ct]
-                logger.info("Using saved compute_type=%s (from previous run)", saved_ct)
-            else:
-                # float16 first: model is stored as float16 on HuggingFace (~461 MB),
-                # so float16 needs no conversion and uses the least peak memory.
-                compute_types = ["float16", "int8", "float32"]
-                logger.info("First run — will probe compute_types in subprocess")
-
-            for compute_type in compute_types:
-                logger.info("Probing compute_type=%s in subprocess (timeout=%ds)...",
-                            compute_type, _PROBE_TIMEOUT)
-                proc = self._launch_worker(compute_type, _PROBE_TIMEOUT)
-                if proc is not None:
-                    self._proc = proc
-                    logger.info("Worker ready: model=%s compute_type=%s",
-                                self._model_name, compute_type)
-                    if not saved_ct:
-                        _save_cached_compute_type(compute_type)
-                        logger.info("Saved compute_type=%s for next run", compute_type)
-                    break
-                if saved_ct:
-                    _COMPUTE_TYPE_CACHE.unlink(missing_ok=True)
-                    logger.warning("Cleared cached compute_type — will re-probe next run")
-                    saved_ct = None
-                    compute_types = ["float16", "int8", "float32"]
-
-            if self._proc is None and not self._load_error:
-                self._load_error = (
-                    "Model failed to load with float16, int8, and float32. "
-                    "Re-run install.bat to re-download the model."
-                )
+            proc = self._launch_worker(_LOAD_TIMEOUT)
+            if proc is not None:
+                self._proc = proc
+                logger.info("Worker ready: %s", model_file.name)
+            elif not self._load_error:
+                self._load_error = "Model failed to load. Re-run install.bat."
                 logger.error(self._load_error)
 
         except Exception as exc:
@@ -270,14 +193,7 @@ class _WindowsTranscriber(Transcriber):
         finally:
             self._ready.set()
 
-    def _launch_worker(
-        self, compute_type: str, timeout: int
-    ) -> "subprocess.Popen[bytes] | None":
-        """Start a worker subprocess and wait for it to signal READY.
-
-        If the worker crashes (native segfault, OOM, etc.) it exits with a non-zero
-        code; we capture its stderr and log it for diagnosis, then return None.
-        """
+    def _launch_worker(self, timeout: int) -> "subprocess.Popen[bytes] | None":
         try:
             proc = subprocess.Popen(
                 [sys.executable, str(_WORKER_SCRIPT)],
@@ -290,18 +206,17 @@ class _WindowsTranscriber(Transcriber):
             return None
 
         try:
-            self._ws(proc, self._model_name)
-            self._ws(proc, compute_type)
+            self._ws(proc, self._model_path)
+            self._ws(proc, "")  # dummy — IPC slot kept for protocol compatibility
             response = self._rs(proc, timeout=timeout)
         except Exception as exc:
-            logger.error("Worker communication error (ct=%s): %s", compute_type, exc)
+            logger.error("Worker communication error: %s", exc)
             self._terminate(proc)
             return None
 
         if response == "READY":
             return proc
 
-        # Worker reported an error or crashed — log its stderr for diagnosis
         stderr_out = ""
         try:
             proc.wait(timeout=5)
@@ -311,22 +226,14 @@ class _WindowsTranscriber(Transcriber):
             pass
 
         if response.startswith("ERROR:"):
-            logger.error("Worker init error (ct=%s): %s", compute_type, response[6:])
+            logger.error("Worker init error: %s", response[6:])
         else:
-            logger.error("Worker init unexpected response (ct=%s): %r", compute_type, response)
+            logger.error("Worker init unexpected response: %r", response)
         if stderr_out:
-            logger.error("Worker stderr (ct=%s):\n%s", compute_type, stderr_out)
+            logger.error("Worker stderr:\n%s", stderr_out)
         if proc.returncode is not None and proc.returncode != 0:
-            rc = proc.returncode & 0xFFFFFFFF
-            logger.error("Worker exit code: %d (0x%08X)", proc.returncode, rc)
-            if rc == 0xC0000005:
-                logger.error(
-                    "0xC0000005 = STATUS_ACCESS_VIOLATION — ctranslate2 native crash. "
-                    "This often means the cached model is in an old format (ctranslate2 v3) "
-                    "incompatible with the installed ctranslate2 v4+. "
-                    "Fix: delete the model directory and re-run setup.py to re-download:\n"
-                    "  del /s /q %%USERPROFILE%%\\.cache\\huggingface\\hub\\models--Systran--faster-whisper-*"
-                )
+            logger.error("Worker exit code: %d (0x%08X)",
+                         proc.returncode, proc.returncode & 0xFFFFFFFF)
 
         self._terminate(proc)
         return None

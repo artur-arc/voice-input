@@ -1,23 +1,8 @@
-"""ctranslate2 worker — runs in an isolated subprocess so native crashes don't kill the tray."""
-import os
+"""pywhispercpp worker — whisper.cpp backend, no ctranslate2."""
 import struct
 import sys
-from pathlib import Path
 
-# Must be set before ctranslate2 is imported.
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("CT2_FORCE_CPU_ISA", "GENERIC")
-os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
-os.environ.setdefault("CT2_VERBOSE", "1")
-# Prevent huggingface_hub from making network calls inside WhisperModel().
-# Without this, HF Hub attempts a remote HEAD request that can time out after
-# ~3 minutes on machines with restricted network access, causing the process
-# to hang and eventually crash with 0xC0000005.
-os.environ.setdefault("HF_HUB_OFFLINE", "1")
-
-import numpy as np  # noqa: E402 — after env vars
+import numpy as np
 
 _RD = sys.stdin.buffer
 _WR = sys.stdout.buffer
@@ -38,59 +23,27 @@ def _log(msg: str) -> None:
     print(msg, file=sys.stderr, flush=True)
 
 
-def _resolve_model_path(model_name: str) -> str:
-    """Return local HF snapshot dir for the model, or model_name as fallback."""
-    if hf_home := os.environ.get("HF_HOME"):
-        cache = Path(hf_home) / "hub"
-    elif hf_cache := os.environ.get("HUGGINGFACE_HUB_CACHE"):
-        cache = Path(hf_cache)
-    else:
-        cache = Path.home() / ".cache" / "huggingface" / "hub"
-    snapshots_dir = cache / f"models--Systran--faster-whisper-{model_name}" / "snapshots"
-    if snapshots_dir.exists():
-        dirs = sorted(snapshots_dir.iterdir())
-        if dirs:
-            return str(dirs[0])
-    return model_name
-
-
 def main() -> None:
-    model_name = _rs()
-    compute_type = _rs()
+    model_path = _rs()
+    _rs()  # dummy second arg — kept for IPC protocol compatibility
 
-    model_path = _resolve_model_path(model_name)
-    _log(f"WORKER: start model={model_name} compute_type={compute_type}")
-    _log(f"WORKER: resolved path={model_path}")
+    _log(f"WORKER: start path={model_path}")
 
     try:
-        import ctranslate2 as _ct2  # type: ignore[import]
-        _log(f"WORKER: ctranslate2 version={_ct2.__version__}")
+        from pywhispercpp.model import Model  # type: ignore[import]
+        _log("WORKER: pywhispercpp imported OK")
     except Exception as exc:
-        _log(f"WORKER: ctranslate2 import error: {exc}")
-
-    try:
-        _log("WORKER: importing faster_whisper")
-        from faster_whisper import WhisperModel  # type: ignore[import]
-        _log("WORKER: faster_whisper imported OK")
-    except Exception as exc:
-        _log(f"WORKER: faster_whisper import failed: {exc}")
+        _log(f"WORKER: import failed: {exc}")
         _ws(f"ERROR:{exc}")
         sys.exit(1)
 
-    _log("WORKER: calling WhisperModel()")
+    _log("WORKER: loading model...")
     try:
-        model = WhisperModel(
-            model_path,
-            device="cpu",
-            compute_type=compute_type,
-            cpu_threads=1,
-            num_workers=1,
-            local_files_only=True,
-        )
-        _log("WORKER: WhisperModel() OK")
+        model = Model(model_path, n_threads=4)
+        _log("WORKER: model loaded OK")
         _ws("READY")
     except Exception as exc:
-        _log(f"WORKER: WhisperModel() exception: {exc}")
+        _log(f"WORKER: load failed: {exc}")
         _ws(f"ERROR:{exc}")
         sys.exit(1)
 
@@ -103,15 +56,14 @@ def main() -> None:
             break
         audio = np.frombuffer(_RD.read(n_samples * 4), dtype=np.float32)
         language = _rs()
-        task = _rs()
-        prompt = _rs()
-        kwargs: dict = {"language": language, "initial_prompt": prompt}
-        if task == "translate":
-            kwargs["task"] = "translate"
+        _rs()  # task
+        _rs()  # prompt
+
         try:
-            segments, _ = model.transcribe(audio, **kwargs)
+            segments = model.transcribe(audio, language=language)
             _ws(" ".join(s.text for s in segments).strip())
-        except Exception:
+        except Exception as exc:
+            _log(f"WORKER: transcribe error: {exc}")
             _ws("")
             break
 

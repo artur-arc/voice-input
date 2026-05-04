@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.request
 from pathlib import Path
 
 REPO_DIR = Path(__file__).parent
@@ -29,7 +30,6 @@ else:
     REQUIREMENTS = REPO_DIR / "requirements.txt"
 
 _MAC_MODEL  = "mlx-community/whisper-large-v3-mlx"
-_WIN_MODELS = ("large-v3", "medium", "small", "tiny")  # ordered heaviest → lightest
 
 
 def _detect_win_model() -> str:
@@ -58,28 +58,13 @@ def _detect_win_model() -> str:
         total_gb = 0.0
 
     if total_gb >= 16:
-        return "large-v3"   # ~1.5 GB model, 30–60 s on CPU
+        return "large-v3"   # GGML ~3.1 GB
     elif total_gb >= 8:
-        return "medium"     # ~490 MB model, 5–15 s on CPU
+        return "medium"     # GGML ~1.5 GB
     else:
-        return "tiny"       # ~75 MB model, 1–3 s on CPU
+        return "tiny"       # GGML ~75 MB
 
 
-def _hf_cache_dir() -> Path:
-    """Return the HuggingFace hub cache directory, respecting env overrides."""
-    if hf_home := os.environ.get("HF_HOME"):
-        return Path(hf_home) / "hub"
-    if hf_cache := os.environ.get("HUGGINGFACE_HUB_CACHE"):
-        return Path(hf_cache)
-    return Path.home() / ".cache" / "huggingface" / "hub"
-
-
-def _cached_win_model(cache_dir: Path) -> str | None:
-    """Return the name of the currently cached faster-whisper model, or None."""
-    for candidate in _WIN_MODELS:
-        if any(cache_dir.glob(f"*faster-whisper-{candidate}*")):
-            return candidate
-    return None
 
 GREEN = "\033[0;32m"
 BOLD  = "\033[1m"
@@ -109,7 +94,7 @@ def create_venv() -> None:
 
 
 def install_packages() -> None:
-    key_pkg = "faster-whisper" if IS_WINDOWS else "mlx-whisper"
+    key_pkg = "pywhispercpp" if IS_WINDOWS else "mlx-whisper"
     r = subprocess.run(
         [str(VENV_PY), "-m", "pip", "show", key_pkg],
         capture_output=True,
@@ -121,7 +106,7 @@ def install_packages() -> None:
         [str(VENV_PY), "-m", "pip", "install", "--quiet", "--upgrade", "pip"],
         check=True,
     )
-    label = "ctranslate2 is ~150 MB" if IS_WINDOWS else "mlx-whisper is ~300 MB"
+    label = "pywhispercpp is ~20 MB" if IS_WINDOWS else "mlx-whisper is ~300 MB"
     print(f"  Installing packages ({label} — please wait)...")
     subprocess.run(
         [str(VENV_PY), "-m", "pip", "install", "--upgrade", "--progress-bar", "on",
@@ -152,71 +137,37 @@ def download_model() -> None:
         subprocess.run([str(VENV_PY), "-c", script], check=True, env=env)
     else:
         target = _detect_win_model()
-        cache_dir = _hf_cache_dir()
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        cached = _cached_win_model(cache_dir)
+        models_dir = REPO_DIR / "models"
+        models_dir.mkdir(parents=True, exist_ok=True)
+        model_file = models_dir / f"ggml-{target}.bin"
 
-        if cached == target:
-            model_dir = cache_dir / f"models--Systran--faster-whisper-{target}"
-            model_bins = sorted(model_dir.glob("**/model.bin"))
-            if model_bins:
-                size_mb = model_bins[0].stat().st_size / 1_048_576
-                ok(f"Model already cached ({target}, {size_mb:.0f} MB)")
-                return
-            print("  Model directory incomplete (model.bin missing) — re-downloading...")
-            shutil.rmtree(model_dir, ignore_errors=True)
-            (REPO_DIR / ".ct2_compute_type").unlink(missing_ok=True)
+        if model_file.exists() and model_file.stat().st_size > 1_000_000:
+            size_mb = model_file.stat().st_size / 1_048_576
+            ok(f"Model already cached ({target}, {size_mb:.0f} MB)")
+            return
 
-        sizes = {"large-v3": "~1.5 GB", "medium": "~490 MB", "small": "~461 MB", "tiny": "~75 MB"}
-        if cached:
-            print(f"  Replacing {cached} → {target} ({sizes.get(target, '?')})...")
-        else:
-            print(f"  Selected model: {target} ({sizes.get(target, '?')}) based on available RAM")
-            print(f"  Downloading — this takes a few minutes...")
+        sizes = {"tiny": "~75 MB", "medium": "~1.5 GB", "large-v3": "~3.1 GB"}
+        print(f"  Selected model: {target} ({sizes.get(target, '?')}) based on available RAM")
+        print(f"  Downloading — this takes a few minutes...")
 
-        # Download-only script: patch tqdm for visible progress, then trigger HF download.
-        # We do NOT call WhisperModel() here — ctranslate2 crashes (exit 3221225477)
-        # on some AMD/Intel CPUs during model init. The actual load happens at first use.
-        # Use a unique temp file to avoid collisions if two installs run in parallel.
-        fd, dl_path = tempfile.mkstemp(suffix=".py", prefix="_vi_dl_")
-        os.close(fd)
-        dl = Path(dl_path)
-        dl.write_text(
-            "import sys, tqdm\n"
-            "try:\n"
-            "    import tqdm.auto as _ta\n"
-            "except ImportError:\n"
-            "    _ta = None\n"
-            "\n"
-            "class _P(tqdm.tqdm):\n"
-            "    def __init__(self, *a, **k):\n"
-            "        k['disable'] = False\n"
-            "        super().__init__(*a, **k)\n"
-            "\n"
-            "tqdm.tqdm = _P\n"
-            "if _ta:\n"
-            "    _ta.tqdm = _P\n"
-            "try:\n"
-            "    import huggingface_hub.utils._tqdm as _h\n"
-            "    _h.tqdm = _P\n"
-            "except Exception:\n"
-            "    pass\n"
-            "\n"
-            "from huggingface_hub import snapshot_download\n"
-            f"snapshot_download('Systran/faster-whisper-{target}')\n"
-            "print('  Model files downloaded.', flush=True)\n",
-            encoding="utf-8",
+        url = (
+            f"https://huggingface.co/ggerganov/whisper.cpp"
+            f"/resolve/main/ggml-{target}.bin"
         )
-        try:
-            subprocess.run([str(VENV_PY), str(dl)], check=True, env=env)
-        finally:
-            dl.unlink(missing_ok=True)
+        tmp_file = model_file.with_suffix(".tmp")
 
-        # Remove old model from cache to free disk space
-        if cached:
-            for old_dir in cache_dir.glob(f"*faster-whisper-{cached}*"):
-                shutil.rmtree(old_dir, ignore_errors=True)
-            ok(f"Removed old model ({cached})")
+        def _progress(count: int, block: int, total: int) -> None:
+            if total > 0:
+                pct = min(100, count * block * 100 // total)
+                print(f"\r  {pct}%", end="", flush=True)
+
+        try:
+            urllib.request.urlretrieve(url, str(tmp_file), reporthook=_progress)
+            print()
+            tmp_file.rename(model_file)
+        except Exception:
+            tmp_file.unlink(missing_ok=True)
+            raise
 
     ok("Model ready")
 
@@ -335,7 +286,7 @@ def print_summary() -> None:
         print("  To remove:  ./install_launchd.sh uninstall")
     else:
         model = _detect_win_model()
-        ok(f"Whisper {model} (CPU, faster-whisper)")
+        ok(f"Whisper {model} (CPU, whisper.cpp)")
         ok("Startup folder autostart")
         print()
         print("  Look for the microphone icon in the system tray (bottom-right).")
