@@ -59,7 +59,7 @@ def _detect_win_model() -> str:
 
     if total_gb >= 16:
         return "large-v3"   # GGML ~3.1 GB
-    elif total_gb >= 8:
+    elif total_gb >= 7:
         return "medium"     # GGML ~1.5 GB
     else:
         return "tiny"       # GGML ~75 MB

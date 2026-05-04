@@ -4,7 +4,6 @@ from __future__ import annotations
 import ctypes
 import logging
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -538,15 +537,11 @@ class VoiceInputTray:
             logger.info("Process restarted")
 
     def _on_uninstall(self, icon: Any, item: Any) -> None:
-        cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
-        model_dirs = list(cache_dir.glob("models--Systran--faster-whisper-*"))
-        model_info = f"• Whisper model cache ({len(model_dirs)} folder(s))\n" if model_dirs else ""
         confirmed = ctypes.windll.user32.MessageBoxW(
             0,
             f"This will permanently remove:\n"
             f"• Startup entry\n"
-            f"{model_info}"
-            f"• App folder: {self._repo_dir}\n\n"
+            f"• App folder (models included): {self._repo_dir}\n\n"
             f"Continue?",
             "Uninstall Voice Input",
             0x04 | 0x30,  # MB_YESNO | MB_ICONWARNING
@@ -560,10 +555,6 @@ class VoiceInputTray:
             / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
         )
         (startup / "voice-input.bat").unlink(missing_ok=True)
-
-        # Delete model cache
-        for d in model_dirs:
-            shutil.rmtree(d, ignore_errors=True)
 
         # Delete the app folder after the process exits via a detached batch script
         repo = str(self._repo_dir)

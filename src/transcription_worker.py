@@ -56,11 +56,11 @@ def main() -> None:
             break
         audio = np.frombuffer(_RD.read(n_samples * 4), dtype=np.float32)
         language = _rs()
-        _rs()  # task
+        task = _rs()
         _rs()  # prompt
 
         try:
-            segments = model.transcribe(audio, language=language)
+            segments = model.transcribe(audio, language=language, translate=(task == "translate"))
             _ws(" ".join(s.text for s in segments).strip())
         except Exception as exc:
             _log(f"WORKER: transcribe error: {exc}")

@@ -22,8 +22,8 @@ call :find_python
 if defined PYTHON (
     call :get_version
     echo  Found Python !PY_VER!
-    :: Compatible: 3.11 or 3.12 only — 3.13+ has no pre-built wheels for faster-whisper/ctranslate2
-    if !PY_MAJOR! geq 3 if !PY_MINOR! geq 11 if !PY_MINOR! leq 12 set "NEED_PYTHON="
+    :: Compatible: 3.11 or newer — pywhispercpp has wheels for 3.11+
+    if !PY_MAJOR! geq 3 if !PY_MINOR! geq 11 set "NEED_PYTHON="
 )
 
 :: Top-level goto — reliable, no blocks
