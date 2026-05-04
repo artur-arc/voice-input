@@ -4,6 +4,7 @@ from __future__ import annotations
 import ctypes
 import logging
 import sys
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +38,10 @@ def accessibility_binary() -> str:
     return sys.executable
 
 
-def paste_text(text: str) -> bool:
+def paste_text(text: str, target_hwnd: int = 0) -> bool:
     """Copy text to clipboard and simulate the paste shortcut (Cmd+V on macOS, Ctrl+V on Windows)."""
     if sys.platform == "win32":
-        return _win_paste(text)
+        return _win_paste(text, target_hwnd)
     return _mac_paste(text)
 
 
@@ -75,9 +76,31 @@ def _mac_paste(text: str) -> bool:
 # ── Windows implementation ────────────────────────────────────────────────────
 
 
-def _win_paste(text: str) -> bool:
+def _win_restore_focus(hwnd: int) -> None:
+    if not hwnd:
+        return
+    try:
+        user32 = ctypes.windll.user32
+        k32 = ctypes.windll.kernel32
+        if not user32.IsWindow(hwnd):
+            return
+        cur_thread = k32.GetCurrentThreadId()
+        tgt_thread = user32.GetWindowThreadProcessId(hwnd, None)
+        if cur_thread != tgt_thread:
+            user32.AttachThreadInput(cur_thread, tgt_thread, True)
+        user32.SetForegroundWindow(hwnd)
+        user32.BringWindowToTop(hwnd)
+        if cur_thread != tgt_thread:
+            user32.AttachThreadInput(cur_thread, tgt_thread, False)
+        time.sleep(0.05)
+    except Exception:
+        pass
+
+
+def _win_paste(text: str, target_hwnd: int = 0) -> bool:
     try:
         _win_write_clipboard(text)
+        _win_restore_focus(target_hwnd)
         _win_send_ctrl_v()
         return True
     except Exception:
@@ -85,6 +108,7 @@ def _win_paste(text: str) -> bool:
     try:
         import pyperclip
         pyperclip.copy(text)
+        _win_restore_focus(target_hwnd)
         _win_send_ctrl_v()
         return True
     except Exception:

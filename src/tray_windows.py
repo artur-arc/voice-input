@@ -369,16 +369,17 @@ class VoiceInputTray:
                     return
                 self._recording = False
             logger.info("RECORD_KEY released — stopping recording")
+            active_hwnd = ctypes.windll.user32.GetForegroundWindow()
             audio = self._recorder.stop()
             threading.Thread(
                 target=self._transcribe_and_paste,
-                args=(audio,),
+                args=(audio, active_hwnd),
                 daemon=True,
             ).start()
         elif key == MODE_KEY:
             self._cycle_mode()
 
-    def _transcribe_and_paste(self, audio: Any) -> None:
+    def _transcribe_and_paste(self, audio: Any, target_hwnd: int = 0) -> None:
         try:
             mode = self._config.current_mode()
             if not self._transcriber.is_ready() and not self._loading_notified:
@@ -389,7 +390,7 @@ class VoiceInputTray:
                 self._feedback.play("Funk")
                 return
             if has_accessibility():
-                paste_text(text)
+                paste_text(text, target_hwnd)
             else:
                 try:
                     import pyperclip
