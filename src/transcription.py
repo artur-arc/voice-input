@@ -54,9 +54,9 @@ def _detect_win_model() -> str:
         total_gb = 0.0
 
     if total_gb >= 14:
-        return "large-v3"
+        return "large-v3-q5_0"
     elif total_gb >= 4:
-        return "medium"
+        return "medium-q5_0"
     else:
         return "tiny"
 
@@ -138,7 +138,8 @@ class _MacTranscriber(Transcriber):
         return result["text"].strip() or None
 
 
-_LOAD_TIMEOUT = 60  # seconds to wait for worker to signal READY
+_LOAD_TIMEOUT       = 60  # seconds to wait for worker to signal READY
+_TRANSCRIBE_TIMEOUT = 30  # seconds before falling back to tiny model
 _MODELS_DIR = Path(__file__).parent.parent / "models"
 _WORKER_SCRIPT = Path(__file__).parent / "transcription_worker.py"
 
@@ -225,7 +226,9 @@ class _WindowsTranscriber(Transcriber):
         except Exception:
             pass
 
-        if response.startswith("ERROR:"):
+        if response is None:
+            logger.error("Worker load timed out after %ds", timeout)
+        elif response.startswith("ERROR:"):
             logger.error("Worker init error: %s", response[6:])
         else:
             logger.error("Worker init unexpected response: %r", response)
@@ -262,7 +265,15 @@ class _WindowsTranscriber(Transcriber):
                 self._ws(self._proc, mode.language)
                 self._ws(self._proc, mode.task)
                 self._ws(self._proc, self._initial_prompt(mode.language))
-                return self._rs(self._proc, timeout=60) or None
+                result = self._rs(self._proc, timeout=_TRANSCRIBE_TIMEOUT)
+                if result is None:
+                    logger.warning("Transcription timed out — killing worker")
+                    self._terminate(self._proc)
+                    self._proc = None
+                    if self._model_name != "tiny":
+                        threading.Thread(target=self._switch_to_tiny, daemon=True).start()
+                    return None
+                return result or None
             except Exception as exc:
                 logger.error("Transcription pipe error: %s", exc)
                 return None
@@ -276,9 +287,24 @@ class _WindowsTranscriber(Transcriber):
         proc.stdin.write(struct.pack(">H", len(b)) + b)
         proc.stdin.flush()
 
+    # ── Model fallback ────────────────────────────────────────────────────────
+
+    def _switch_to_tiny(self) -> None:
+        prev = self._model_name
+        self._model_name = "tiny"
+        self._model_path = str(_MODELS_DIR / "ggml-tiny.bin")
+        self._load_error = None
+        self._ready.clear()
+        logger.warning("Model fallback: %s → tiny (CPU too slow for primary model)", prev)
+        self.warm_up()
+
+    # ── IPC helpers ───────────────────────────────────────────────────────────
+
     @staticmethod
-    def _rs(proc: "subprocess.Popen[bytes]", timeout: int) -> str:
-        """Read a length-prefixed UTF-8 string from the worker stdout with a timeout."""
+    def _rs(proc: "subprocess.Popen[bytes]", timeout: int) -> str | None:
+        """Read a length-prefixed UTF-8 string from the worker stdout with a timeout.
+        Returns None on timeout (distinguishable from empty string result).
+        """
         result_q: queue.Queue[str | Exception] = queue.Queue()
 
         def _read() -> None:
@@ -301,7 +327,7 @@ class _WindowsTranscriber(Transcriber):
             return val
         except queue.Empty:
             logger.warning("Worker response timed out after %ds", timeout)
-            return ""
+            return None
 
     @staticmethod
     def _terminate(proc: "subprocess.Popen[bytes]") -> None:

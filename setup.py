@@ -58,11 +58,11 @@ def _detect_win_model() -> str:
         total_gb = 0.0
 
     if total_gb >= 14:
-        return "large-v3"   # GGML ~3.1 GB
+        return "large-v3-q5_0"  # GGML q5_0 ~1.1 GB
     elif total_gb >= 4:
-        return "medium"     # GGML ~1.5 GB
+        return "medium-q5_0"    # GGML q5_0 ~514 MB
     else:
-        return "tiny"       # GGML ~75 MB — RAM detection failed or genuinely low
+        return "tiny"           # GGML ~75 MB — RAM detection failed or genuinely low
 
 
 
@@ -139,35 +139,41 @@ def download_model() -> None:
         target = _detect_win_model()
         models_dir = REPO_DIR / "models"
         models_dir.mkdir(parents=True, exist_ok=True)
-        model_file = models_dir / f"ggml-{target}.bin"
 
-        if model_file.exists() and model_file.stat().st_size > 1_000_000:
-            size_mb = model_file.stat().st_size / 1_048_576
-            ok(f"Model already cached ({target}, {size_mb:.0f} MB)")
-            return
+        sizes = {
+            "tiny":           "~75 MB",
+            "medium-q5_0":    "~514 MB",
+            "large-v3-q5_0":  "~1.1 GB",
+        }
 
-        sizes = {"tiny": "~75 MB", "medium": "~1.5 GB", "large-v3": "~3.1 GB"}
-        print(f"  Selected model: {target} ({sizes.get(target, '?')}) based on available RAM")
-        print(f"  Downloading — this takes a few minutes...")
+        # Always download tiny as CPU-speed fallback; then download primary if different.
+        to_download = ["tiny"] if target == "tiny" else ["tiny", target]
+        for model_name in to_download:
+            model_file = models_dir / f"ggml-{model_name}.bin"
+            if model_file.exists() and model_file.stat().st_size > 1_000_000:
+                size_mb = model_file.stat().st_size / 1_048_576
+                ok(f"ggml-{model_name}.bin already cached ({size_mb:.0f} MB)")
+                continue
+            label = sizes.get(model_name, "?")
+            print(f"  Downloading ggml-{model_name}.bin ({label})...")
+            url = (
+                f"https://huggingface.co/ggerganov/whisper.cpp"
+                f"/resolve/main/ggml-{model_name}.bin"
+            )
+            tmp_file = model_file.with_suffix(".tmp")
 
-        url = (
-            f"https://huggingface.co/ggerganov/whisper.cpp"
-            f"/resolve/main/ggml-{target}.bin"
-        )
-        tmp_file = model_file.with_suffix(".tmp")
+            def _progress(count: int, block: int, total: int) -> None:
+                if total > 0:
+                    pct = min(100, count * block * 100 // total)
+                    print(f"\r  {pct}%", end="", flush=True)
 
-        def _progress(count: int, block: int, total: int) -> None:
-            if total > 0:
-                pct = min(100, count * block * 100 // total)
-                print(f"\r  {pct}%", end="", flush=True)
-
-        try:
-            urllib.request.urlretrieve(url, str(tmp_file), reporthook=_progress)
-            print()
-            tmp_file.rename(model_file)
-        except Exception:
-            tmp_file.unlink(missing_ok=True)
-            raise
+            try:
+                urllib.request.urlretrieve(url, str(tmp_file), reporthook=_progress)
+                print()
+                tmp_file.rename(model_file)
+            except Exception:
+                tmp_file.unlink(missing_ok=True)
+                raise
 
     ok("Model ready")
 
@@ -286,7 +292,8 @@ def print_summary() -> None:
         print("  To remove:  ./install_launchd.sh uninstall")
     else:
         model = _detect_win_model()
-        ok(f"Whisper {model} (CPU, whisper.cpp)")
+        model_display = model.split("-q")[0]  # "medium" from "medium-q5_0"
+        ok(f"Whisper {model_display} quantized (CPU, whisper.cpp) + tiny fallback")
         ok("Startup folder autostart")
         print()
         print("  Look for the microphone icon in the system tray (bottom-right).")

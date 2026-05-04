@@ -3,7 +3,8 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-04
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`a3036c2`](https://github.com/artur-arc/voice-input/commit/a3036c2dc7fdb5dc94c693927b112e91da9e1fda) Group sound and notifications under
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`23d458a`](https://github.com/artur-arc/voice-input/commit/23d458a62a6b4827a7789930788b522ddd6d8a25) Update model selection and download logic
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`2c2569a`](https://github.com/artur-arc/voice-input/commit/2c2569a395acca8ef5a56bb1921ebdac8264d982) Group sound and notifications under
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`3470c6d`](https://github.com/artur-arc/voice-input/commit/3470c6d50b37675f4e9408ba5e87c4bd431f3731) Update voice input configurations
 - ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`2c210ea`](https://github.com/artur-arc/voice-input/commit/2c210eafa34c74213247d1437ddff805bb559aa3) Enable/disable sounds and notifications in config
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`b6fb582`](https://github.com/artur-arc/voice-input/commit/b6fb582ae332d64ccb1d8d1ef04291bd744eac7d) Update whisper model and Python version requirement

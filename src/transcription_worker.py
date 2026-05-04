@@ -1,4 +1,5 @@
 """pywhispercpp worker — whisper.cpp backend, no ctranslate2."""
+import os
 import struct
 import sys
 
@@ -39,7 +40,7 @@ def main() -> None:
 
     _log("WORKER: loading model...")
     try:
-        model = Model(model_path, n_threads=4)
+        model = Model(model_path, n_threads=max(1, os.cpu_count() or 4))
         _log("WORKER: model loaded OK")
         _ws("READY")
     except Exception as exc:
