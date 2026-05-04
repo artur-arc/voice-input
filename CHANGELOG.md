@@ -1,8 +1,9 @@
 # Changelog
 
 All notable changes to voice-input.
-## [unreleased]
+## v1.0.42 — 2026-05-04
 ### 2026-05-04
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`05b0428`](https://github.com/artur-arc/voice-input/commit/05b0428d0fbd031dd413cab4c431e93745131387) Release v1.0.42
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`34fa533`](https://github.com/artur-arc/voice-input/commit/34fa53364a0d5f453c1469f021245516e0bce3c2) Extend model support on Windows
 
 ## v1.0.41 — 2026-05-03

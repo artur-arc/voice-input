@@ -60,9 +60,7 @@ def _detect_win_model() -> str:
     if total_gb >= 16:
         return "large-v3"   # ~1.5 GB model, 30–60 s on CPU
     elif total_gb >= 8:
-        return "medium"     # ~470 MB model, 5–15 s on CPU
-    elif total_gb >= 4:
-        return "small"      # ~461 MB model, 5–10 s on CPU
+        return "medium"     # ~490 MB model, 5–15 s on CPU
     else:
         return "tiny"       # ~75 MB model, 1–3 s on CPU
 

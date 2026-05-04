@@ -57,8 +57,6 @@ def _detect_win_model() -> str:
         return "large-v3"
     elif total_gb >= 8:
         return "medium"
-    elif total_gb >= 4:
-        return "small"
     else:
         return "tiny"
 
