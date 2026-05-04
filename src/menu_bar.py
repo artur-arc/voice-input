@@ -29,6 +29,7 @@ _VERSION_FILE: Final[Path] = _REPO_DIR / "VERSION"
 _ICON_FILE: Final[Path] = _REPO_DIR / "assets" / "icon.svg"
 _SERVICE_LABEL: Final[str] = "com.user.voice-input"
 _MENU_LABEL: Final[str] = "com.user.voice-input-menu"
+_GITHUB_URL: Final[str] = "https://github.com/artur-arc/voice-input"
 
 
 def _read_version(path: Path) -> str:
@@ -260,7 +261,7 @@ class VoiceInputMenuBar(rumps.App):
         items.append(None)
 
         # ── Version + Restart to Update ───────────────────────────────────────
-        ver_item = rumps.MenuItem(f"Version {local_ver}")
+        ver_item = rumps.MenuItem(f"Version {local_ver}", callback=self._on_about)
         items.append(ver_item)
         items.append(rumps.MenuItem("Restart to Update", callback=self._on_restart_update))
 
@@ -316,6 +317,9 @@ class VoiceInputMenuBar(rumps.App):
             item.state = 1 if granted else 0
             parent[name] = item
         return parent
+
+    def _on_about(self, _: rumps.MenuItem) -> None:
+        subprocess.Popen(["open", _GITHUB_URL])
 
     def _on_uninstall(self, _: rumps.MenuItem) -> None:
         hf_cache = Path.home() / ".cache" / "huggingface" / "hub"

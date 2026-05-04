@@ -19,4 +19,6 @@ MODES: Final[tuple[Mode, ...]] = (
     Mode(key="russian-english", label="ru→en",  task="translate",  language="ru"),
     Mode(key="russian-russian", label="ru→ru",  task="transcribe", language="ru"),
     Mode(key="english-english", label="en→en",  task="transcribe", language="en"),
+    Mode(key="hebrew-english",  label="he→en",  task="translate",  language="he"),
+    Mode(key="hebrew-hebrew",   label="he→he",  task="transcribe", language="he"),
 )

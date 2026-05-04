@@ -112,9 +112,22 @@ def install_packages() -> None:
     key_pkg = "faster-whisper" if IS_WINDOWS else "mlx-whisper"
     r = subprocess.run(
         [str(VENV_PY), "-m", "pip", "show", key_pkg],
-        capture_output=True,
+        capture_output=True, text=True,
     )
-    if r.returncode == 0:
+    needs_install = r.returncode != 0
+    if not needs_install and IS_WINDOWS:
+        ver_line = next((l for l in r.stdout.splitlines() if l.startswith("Version:")), "")
+        ver_str = ver_line.split(":", 1)[-1].strip()
+        parts = [int(x) for x in ver_str.split(".")[:2]] if ver_str else [0, 0]
+        if parts >= [1, 0]:
+            print(f"  faster-whisper {ver_str} — downgrading to v0.10.x (ctranslate2 v3)...")
+            cache_dir = _hf_cache_dir()
+            for d in cache_dir.glob("models--Systran--faster-whisper-*"):
+                shutil.rmtree(d, ignore_errors=True)
+            (REPO_DIR / ".ct2_compute_type").unlink(missing_ok=True)
+            ok("Model cache cleared (format change)")
+            needs_install = True
+    if not needs_install:
         ok("Packages already installed")
         return
     subprocess.run(

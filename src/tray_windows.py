@@ -32,6 +32,8 @@ _CONFIG_FILE: Final[Path] = _REPO_DIR / "voice-input-config.json"
 _VERSION_FILE: Final[Path] = _REPO_DIR / "VERSION"
 _ICON_FILE: Final[Path] = _REPO_DIR / "assets" / "icon.ico"
 
+_GITHUB_URL: Final[str] = "https://github.com/artur-arc/voice-input"
+
 _WIN_PERM_URLS: dict[str, str] = {
     "Microphone": "ms-settings:privacy-microphone",
     "Keyboard hooks": "ms-settings:privacy-keyboard",
@@ -472,7 +474,11 @@ class VoiceInputTray:
 
         items.append(pystray.Menu.SEPARATOR)
 
-        items.append(pystray.MenuItem(f"Version {local_ver}", None, enabled=False))
+        items.append(pystray.MenuItem(
+            f"Version {local_ver}",
+            lambda *_: os.startfile(_GITHUB_URL),
+            default=False,
+        ))
         items.append(pystray.MenuItem("Restart to Update", self._on_restart_update, default=False))
 
         items.append(pystray.Menu.SEPARATOR)
