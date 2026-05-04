@@ -3,6 +3,11 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-04
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`a35ff39`](https://github.com/artur-arc/voice-input/commit/a35ff399258cebd1bb41ceacd2fe387bd8aaf54e) Update whisper model and Python version requirement
+
+## v1.0.49 — 2026-05-04
+### 2026-05-04
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`ed5018f`](https://github.com/artur-arc/voice-input/commit/ed5018f515541da2c9edd42eab9c24c60bd63c3d) Release v1.0.49
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`64c72d4`](https://github.com/artur-arc/voice-input/commit/64c72d467f3673eeeb2f8c4df43789811201de85) Adjust model detection thresholds for better
 
 ## v1.0.48 — 2026-05-04

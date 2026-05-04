@@ -3,7 +3,7 @@
 Hold <kbd>⌘ Right Cmd</kbd>, speak, release — the transcribed text is pasted at the cursor in any app: browser, notes, chat, code editor, any text field.
 A microphone icon in the menu bar gives access to all settings. <kbd>⌥ Right Option</kbd> cycles language modes as a secondary shortcut.
 
-macOS uses mlx-whisper on Apple Silicon (Neural Engine). Windows uses faster-whisper on CPU.
+macOS uses mlx-whisper on Apple Silicon (Neural Engine). Windows uses whisper.cpp (pywhispercpp) on CPU.
 
 ## Requirements
 
@@ -35,8 +35,8 @@ microphone icon appears in the menu bar and the app starts at every login.
 [**Download install.bat**](https://raw.githubusercontent.com/artur-arc/voice-input/main/install.bat)
 *(if it opens as text in your browser, right-click the link → Save Link As)*
 
-Double-click `install.bat`. The installer downloads and installs Python 3.12, downloads the Whisper
-model (~1.5 GB), and registers autostart. When it finishes, a microphone icon appears in the system
+Double-click `install.bat`. The installer installs Python 3.12 or newer, downloads the Whisper
+model (75 MB – 1.5 GB depending on available RAM), and registers autostart. When it finishes, a microphone icon appears in the system
 tray and the app starts at every login. After installation, grant microphone access when Windows
 prompts — or follow the steps in the Permissions section below if the prompt was missed.
 
@@ -102,7 +102,7 @@ If the app is not recording, open **Settings → Privacy & Security → Micropho
 Language mode and microphone can also be changed from the menu bar icon (macOS) or system
 tray icon (Windows).
 
-Audio feedback: Tink on recording start, Pop on success, Funk on error.
+Audio feedback: Pop on recording start, Tink on successful paste, Funk on error.
 A macOS notification appears on mode change and at startup.
 
 ## Menu bar
