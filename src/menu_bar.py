@@ -20,7 +20,7 @@ sys.path.insert(0, str(_SRC_DIR))
 
 from config import ConfigManager  # noqa: E402
 from log_config import setup_logging  # noqa: E402
-from modes import MODEL_REPO, MODES  # noqa: E402
+from modes import MODEL_REPO, TEXT_MODES  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -235,11 +235,32 @@ class VoiceInputMenuBar(rumps.App):
 
         items: list[Any] = []
 
-        # ── Language modes ────────────────────────────────────────────────────
-        for i, m in enumerate(MODES):
+        # ── Languages submenu ─────────────────────────────────────────────────
+        lang_items: list[Any] = []
+        for m in TEXT_MODES:
             item = rumps.MenuItem(m.label, callback=self._on_mode)
             item.state = 1 if m.key == mode.key else 0
-            items.append(item)
+            lang_items.append(item)
+        lang_menu = rumps.MenuItem("Languages")
+        lang_menu.update(lang_items)
+        items.append(lang_menu)
+
+        # ── Commands submenu ──────────────────────────────────────────────────
+        cmd_lang = self._config.command_lang()
+        cmd_options = [
+            ("auto", "Auto (follows language)"),
+            ("ru",   "Russian"),
+            ("en",   "English"),
+            ("he",   "Hebrew"),
+        ]
+        cmd_items: list[Any] = []
+        for val, label in cmd_options:
+            item = rumps.MenuItem(label, callback=self._on_cmd_lang)
+            item.state = 1 if cmd_lang == val else 0
+            cmd_items.append(item)
+        cmd_menu = rumps.MenuItem("Commands")
+        cmd_menu.update(cmd_items)
+        items.append(cmd_menu)
 
         items.append(None)
 
@@ -299,10 +320,21 @@ class VoiceInputMenuBar(rumps.App):
     # ── Callbacks ─────────────────────────────────────────────────────────────
 
     def _on_mode(self, sender: rumps.MenuItem) -> None:
-        for i, m in enumerate(MODES):
+        for i, m in enumerate(TEXT_MODES):
             if m.label == sender.title:
                 self._config.save(i)
                 break
+        self._refresh()
+
+    def _on_cmd_lang(self, sender: rumps.MenuItem) -> None:
+        mapping = {
+            "Auto (follows language)": "auto",
+            "Russian": "ru",
+            "English": "en",
+            "Hebrew":  "he",
+        }
+        lang = mapping.get(sender.title, "auto")
+        self._config.save_command_lang(lang)
         self._refresh()
 
     def _on_device(self, sender: rumps.MenuItem) -> None:

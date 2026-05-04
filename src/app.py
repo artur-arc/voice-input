@@ -10,12 +10,12 @@ from pynput.keyboard import Key, KeyCode
 from audio import AudioRecorder
 from config import ConfigManager
 from feedback import UserFeedback
-from modes import MIN_RECORD_SEC, MODES, SAMPLE_RATE
+from modes import MIN_RECORD_SEC, SAMPLE_RATE
 from paste_util import accessibility_binary, has_accessibility, paste_text
 from transcription import Transcriber
 
-RECORD_KEY: Final[Key] = Key.cmd_r
-MODE_KEY: Final[Key] = Key.alt_r
+COMMAND_KEY: Final[Key] = Key.cmd_r   # hold → voice command
+TEXT_KEY: Final[Key] = Key.alt_r      # hold → transcribe + paste
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,7 @@ class VoiceInputApp:
         self._recorder = recorder
         self._transcriber = transcriber
         self._feedback = feedback
+        self._active_key: Key | None = None
 
     def start(self) -> None:
         self._config.load()
@@ -44,11 +45,9 @@ class VoiceInputApp:
         logger.info("Loading %s...", self._transcriber.model_repo)
         self._transcriber.warm_up()
 
-        m = self._config.current_mode()
         ax_ok = has_accessibility()
         logger.info(
-            "Ready. Mode: %s | accessibility: %s",
-            m.label,
+            "Ready. cmd_r=command · alt_r=text | accessibility: %s",
             "yes" if ax_ok else "no (paste disabled)",
         )
         if not ax_ok:
@@ -58,7 +57,7 @@ class VoiceInputApp:
             logger.warning("Binary: %s", accessibility_binary())
         self._feedback.notify(
             "Voice Input",
-            f"Ready · {m.label}" + ("" if ax_ok else " · no paste"),
+            "Ready · Cmd=command · Opt=text" + ("" if ax_ok else " · no paste"),
         )
         self._config.watch(self._on_config_change)
         self._run_listener()
@@ -72,9 +71,6 @@ class VoiceInputApp:
                     on_release=self._on_release,
                 ) as listener:
                     listener.join()
-                # listener.join() returned without exception — pynput stopped the
-                # event tap (e.g. Accessibility revoked during launchd restart).
-                # Treat as a transient failure and restart.
                 attempts += 1
                 logger.warning(
                     "Keyboard listener stopped unexpectedly (attempt %d/%d) — restarting",
@@ -95,23 +91,14 @@ class VoiceInputApp:
         )
 
     def _on_press(self, key: Key | KeyCode | None) -> None:
-        if key == RECORD_KEY:
+        if key in (COMMAND_KEY, TEXT_KEY) and self._active_key is None:
+            self._active_key = key
             self._start_recording()
-        elif key == MODE_KEY:
-            self._cycle_mode()
 
     def _on_release(self, key: Key | KeyCode | None) -> None:
-        if key == RECORD_KEY:
-            self._stop_and_transcribe()
-
-    def _cycle_mode(self) -> None:
-        current = self._config.current_mode()
-        new_index = (MODES.index(current) + 1) % len(MODES)
-        self._config.save(new_index)
-        m = self._config.current_mode()
-        logger.info("Mode → %s", m.label)
-        self._feedback.notify("Voice Input", f"Mode: {m.label}")
-        self._feedback.play("Tink")
+        if key == self._active_key:
+            self._active_key = None
+            self._stop_and_transcribe(key)
 
     def _log_device_info(self) -> None:
         configured = self._config.input_device()
@@ -134,18 +121,19 @@ class VoiceInputApp:
             return
         self._feedback.play("Tink")
 
-    def _stop_and_transcribe(self) -> None:
+    def _stop_and_transcribe(self, key: Key) -> None:
         audio = self._recorder.stop()
         if len(audio) < SAMPLE_RATE * MIN_RECORD_SEC:
             return
         threading.Thread(
-            target=self._transcribe_and_paste,
-            args=(audio,),
+            target=self._transcribe_and_handle,
+            args=(audio, key),
             daemon=True,
         ).start()
 
-    def _transcribe_and_paste(self, audio: np.ndarray) -> None:
-        m = self._config.current_mode()
+    def _transcribe_and_handle(self, audio: np.ndarray, key: Key) -> None:
+        is_command = key == COMMAND_KEY
+        m = self._config.command_mode() if is_command else self._config.current_mode()
         try:
             t0 = time.time()
             text = self._transcriber.transcribe(audio, m)
@@ -158,7 +146,7 @@ class VoiceInputApp:
             elapsed = time.time() - t0
             logger.info("[%.1fs] [%s] %s", elapsed, m.label, text)
 
-            if m.key.startswith("command"):
+            if is_command:
                 from command_executor import handle as execute_command
                 recognized = execute_command(text)
                 self._feedback.play("Pop" if recognized else "Funk")
@@ -174,6 +162,6 @@ class VoiceInputApp:
             self._feedback.play("Funk")
 
     def _on_config_change(self, _index: int) -> None:
-        logger.info("Config reloaded → mode: %s", self._config.current_mode().label)
+        logger.info("Config reloaded")
         self._feedback.sounds_enabled = self._config.sounds_enabled()
         self._feedback.notifications_enabled = self._config.notifications_enabled()

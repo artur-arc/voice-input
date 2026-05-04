@@ -1,13 +1,13 @@
 {
-    "voiceInputConfig": {
-        "english-english": false,
+    "languages": {
         "russian-english": false,
-        "russian-russian": false,
+        "russian-russian": true,
+        "english-english": false,
         "hebrew-english": false,
-        "hebrew-hebrew": false,
-        "command-russian": true,
-        "command-english": false,
-        "command-hebrew": false
+        "hebrew-hebrew": false
+    },
+    "commands": {
+        "language": "auto"
     },
     "input_device": null,
     "sounds_enabled": true,

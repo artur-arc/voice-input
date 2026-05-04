@@ -25,3 +25,13 @@ MODES: Final[tuple[Mode, ...]] = (
     Mode(key="command-english", label="cmd·en", task="transcribe", language="en"),
     Mode(key="command-hebrew",  label="cmd·he", task="transcribe", language="he"),
 )
+
+# Text-only modes (shown in UI / saved under "languages")
+TEXT_MODES: Final[tuple[Mode, ...]] = tuple(m for m in MODES if not m.key.startswith("command"))
+
+# language code → command mode key
+LANG_TO_CMD: Final[dict[str, str]] = {
+    "ru": "command-russian",
+    "en": "command-english",
+    "he": "command-hebrew",
+}
