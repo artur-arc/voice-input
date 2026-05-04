@@ -2,7 +2,12 @@
 
 All notable changes to voice-input.
 ## [unreleased]
+### 2026-05-04
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`8df07b7`](https://github.com/artur-arc/voice-input/commit/8df07b7babe075b263d62e1eeb2bb0335ea8c3d5) Extend model support on Windows
+
+## v1.0.41 — 2026-05-03
 ### 2026-05-03
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`2866a64`](https://github.com/artur-arc/voice-input/commit/2866a64a2d34acb85e91d4118298e75ac33c48a1) Release v1.0.41
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`ccf2f29`](https://github.com/artur-arc/voice-input/commit/ccf2f295d7c6022857897b8d7097af7a0a6841d7) Remove redundant tray instance killing in setup.py
 
 ## v1.0.40 — 2026-05-03

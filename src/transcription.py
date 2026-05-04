@@ -4,6 +4,7 @@ from __future__ import annotations
 import contextlib
 import io
 import logging
+import os
 import queue
 import struct
 import subprocess
@@ -56,8 +57,10 @@ def _detect_win_model() -> str:
         return "large-v3"
     elif total_gb >= 8:
         return "medium"
-    else:
+    elif total_gb >= 4:
         return "small"
+    else:
+        return "tiny"
 
 
 class Transcriber(ABC):
@@ -184,10 +187,19 @@ class _WindowsTranscriber(Transcriber):
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
+    @staticmethod
+    def _hf_cache_dir() -> Path:
+        if hf_home := os.environ.get("HF_HOME"):
+            return Path(hf_home) / "hub"
+        if hf_cache := os.environ.get("HUGGINGFACE_HUB_CACHE"):
+            return Path(hf_cache)
+        return Path.home() / ".cache" / "huggingface" / "hub"
+
     def warm_up(self) -> None:
         try:
-            cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
+            cache_dir = self._hf_cache_dir()
             model_dir = cache_dir / f"models--Systran--faster-whisper-{self._model_name}"
+            logger.info("HF cache dir: %s", cache_dir)
             logger.info("Checking model cache: %s", model_dir)
 
             if not model_dir.exists():
@@ -198,7 +210,7 @@ class _WindowsTranscriber(Transcriber):
                 return
 
             # Validate model.bin — ctranslate2 crashes with 0xC0000005 on corrupted files.
-            _EXPECTED_MIN_MB = {"small": 200, "medium": 400, "large-v3": 1400}
+            _EXPECTED_MIN_MB = {"tiny": 40, "small": 200, "medium": 400, "large-v3": 1400}
             model_bins = sorted(model_dir.glob("**/model.bin"))
             if not model_bins:
                 self._load_error = (

@@ -29,7 +29,7 @@ else:
     REQUIREMENTS = REPO_DIR / "requirements.txt"
 
 _MAC_MODEL  = "mlx-community/whisper-large-v3-mlx"
-_WIN_MODELS = ("large-v3", "medium", "small")  # ordered heaviest → lightest
+_WIN_MODELS = ("large-v3", "medium", "small", "tiny")  # ordered heaviest → lightest
 
 
 def _detect_win_model() -> str:
@@ -61,8 +61,10 @@ def _detect_win_model() -> str:
         return "large-v3"   # ~1.5 GB model, 30–60 s on CPU
     elif total_gb >= 8:
         return "medium"     # ~470 MB model, 5–15 s on CPU
+    elif total_gb >= 4:
+        return "small"      # ~461 MB model, 5–10 s on CPU
     else:
-        return "small"      # ~150 MB model, 2–5 s on CPU
+        return "tiny"       # ~75 MB model, 1–3 s on CPU
 
 
 def _hf_cache_dir() -> Path:
@@ -115,24 +117,8 @@ def install_packages() -> None:
         capture_output=True,
     )
     if r.returncode == 0:
-        # On Windows also verify ctranslate2 is within the pinned range (<4.7).
-        # If 4.7+ is installed, downgrade it — that version crashes on some CPUs.
-        if IS_WINDOWS:
-            ct2 = subprocess.run(
-                [str(VENV_PY), "-m", "pip", "show", "ctranslate2"],
-                capture_output=True, text=True,
-            )
-            ver_line = next((l for l in ct2.stdout.splitlines() if l.startswith("Version:")), "")
-            ver = ver_line.split(":", 1)[-1].strip()
-            parts = [int(x) for x in ver.split(".")[:2]] if ver else [0, 0]
-            if parts >= [4, 7]:
-                print(f"  ctranslate2 {ver} detected — downgrading to <4.7 (stability fix)...")
-            else:
-                ok("Packages already installed")
-                return
-        else:
-            ok("Packages already installed")
-            return
+        ok("Packages already installed")
+        return
     subprocess.run(
         [str(VENV_PY), "-m", "pip", "install", "--quiet", "--upgrade", "pip"],
         check=True,
@@ -183,7 +169,7 @@ def download_model() -> None:
             shutil.rmtree(model_dir, ignore_errors=True)
             (REPO_DIR / ".ct2_compute_type").unlink(missing_ok=True)
 
-        sizes = {"large-v3": "~1.5 GB", "medium": "~490 MB", "small": "~250 MB"}
+        sizes = {"large-v3": "~1.5 GB", "medium": "~490 MB", "small": "~461 MB", "tiny": "~75 MB"}
         if cached:
             print(f"  Replacing {cached} → {target} ({sizes.get(target, '?')})...")
         else:
