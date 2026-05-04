@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import subprocess
+import sys
 import threading
 import time
 from urllib.parse import quote_plus
@@ -73,7 +75,106 @@ _SIMPLE: list[tuple[str, str]] = [
     (r"\bscreenshot\b",                                "screenshot"),
 ]
 
-# macOS app name lookup (for Ollama open_app responses)
+# ── Windows helpers ──────────────────────────────────────────────────────────
+
+# Virtual key codes for media / volume
+_WIN_VK_MUTE       = 0xAD
+_WIN_VK_VOL_DOWN   = 0xAE
+_WIN_VK_VOL_UP     = 0xAF
+_WIN_VK_MEDIA_NEXT = 0xB0
+_WIN_VK_MEDIA_PREV = 0xB1
+_WIN_VK_MEDIA_STOP = 0xB2
+_WIN_VK_MEDIA_PLAY = 0xB3
+_WIN_VK_LWIN       = 0x5B
+_WIN_VK_D          = 0x44
+_KEYEVENTF_KEYUP   = 0x0002
+
+
+def _win_vk_press(vk: int) -> None:
+    import ctypes
+    ctypes.windll.user32.keybd_event(vk, 0, 0, 0)
+    ctypes.windll.user32.keybd_event(vk, 0, _KEYEVENTF_KEYUP, 0)
+
+
+def _win_open(target: str) -> None:
+    """Open URL, protocol URI, or file path via ShellExecute."""
+    os.startfile(target)
+
+
+def _win_exe(exe: str, *args: str) -> None:
+    """Launch an executable by name (must be on PATH or a known alias)."""
+    try:
+        subprocess.Popen([exe, *args])
+    except FileNotFoundError:
+        logger.warning("Executable not found: %s", exe)
+
+
+def _win_screenshot() -> None:
+    from pathlib import Path
+    from PIL import ImageGrab
+    dest = Path.home() / "Desktop" / "screenshot.png"
+    img = ImageGrab.grab()
+    img.save(dest)
+    logger.info("Screenshot → %s", dest)
+
+
+def _win_speak(text: str, lang: str = "ru") -> None:
+    safe = text.replace("'", "''")
+    subprocess.Popen([
+        "powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command",
+        f"Add-Type -AssemblyName System.Speech; "
+        f"$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; "
+        f"$s.Speak('{safe}')",
+    ])
+    logger.info("Speaking (SAPI): %s", text[:80])
+
+
+def _win_confirm(message: str) -> bool:
+    import ctypes
+    # MB_OKCANCEL = 0x1; returns 1 (IDOK) or 2 (IDCANCEL)
+    return ctypes.windll.user32.MessageBoxW(0, message, "Voice Input", 0x1) == 1
+
+
+# Windows app name → launcher target (exe name or protocol URI)
+_WIN_APP_MAP: dict[str, str] = {
+    "safari":          "__default_browser__",
+    "сафари":          "__default_browser__",
+    "браузер":         "__default_browser__",
+    "browser":         "__default_browser__",
+    "chrome":          "chrome",
+    "google chrome":   "chrome",
+    "хром":            "chrome",
+    "firefox":         "firefox",
+    "фаерфокс":        "firefox",
+    "spotify":         "__spotify__",
+    "спотифай":        "__spotify__",
+    "спотифи":         "__spotify__",
+    "music":           "wmplayer",
+    "itunes":          "wmplayer",
+    "итюнс":           "wmplayer",
+    "музыка":          "wmplayer",
+    "terminal":        "wt",
+    "терминал":        "wt",
+    "finder":          "explorer",
+    "файлы":           "explorer",
+    "проводник":       "explorer",
+    "notes":           "notepad",
+    "заметки":         "notepad",
+    "settings":        "ms-settings:",
+    "system settings": "ms-settings:",
+    "настройки":       "ms-settings:",
+    "vscode":          "code",
+    "vs code":         "code",
+    "visual studio":   "code",
+    "slack":           "slack",
+    "слак":            "slack",
+    "telegram":        "telegram",
+    "телеграм":        "telegram",
+    "zoom":            "zoom",
+}
+
+# ── macOS app name lookup (for Ollama open_app responses) ─────────────────────
+
 _APP_MAP: dict[str, str] = {
     "safari":          "Safari",
     "сафари":          "Safari",
@@ -111,45 +212,56 @@ _APP_MAP: dict[str, str] = {
 }
 
 _SYSTEM_PROMPT = """\
-You are a macOS voice command assistant. The user speaks in Russian, English, or Hebrew.
-Return ONLY a JSON object — no explanation, no markdown.
+You are a voice assistant for macOS and Windows. The user speaks in Russian, English, or Hebrew.
+Decide if the input is a COMMAND or a QUESTION, then return ONLY a JSON object.
 
-Supported actions:
-{"action": "open_browser"}                           — открой браузер / open browser
-{"action": "open_spotify"}                           — включи spotify / спотифай
-{"action": "open_safari"}                            — открой safari / сафари
-{"action": "open_chrome"}                            — открой chrome / хром
-{"action": "open_music"}                             — открой музыку / itunes
-{"action": "open_terminal"}                          — открой терминал
-{"action": "open_finder"}                            — открой finder / файлы
-{"action": "open_notes"}                             — открой заметки
-{"action": "open_settings"}                          — открой настройки
-{"action": "open_slack"}                             — открой slack
-{"action": "open_telegram"}                          — открой телеграм
-{"action": "open_zoom"}                              — открой zoom
-{"action": "open_downloads"}                         — открой загрузки
-{"action": "open_documents"}                         — открой документы
-{"action": "mute"}                                   — выключи звук / mute
-{"action": "unmute"}                                 — включи звук / unmute
-{"action": "volume_up"}                              — громче / louder
-{"action": "volume_down"}                            — тише / quieter
-{"action": "media_pause"}                            — пауза / стоп / pause
-{"action": "media_next"}                             — следующий трек / next track
-{"action": "media_prev"}                             — предыдущий трек / previous
-{"action": "screenshot"}                             — скриншот / screenshot
-{"action": "sleep"}                                  — усыпи компьютер / sleep
-{"action": "lock_screen"}                            — заблокируй экран / lock
-{"action": "restart"}                                — перезагрузи / restart
-{"action": "shutdown"}                               — выключи компьютер / shutdown
-{"action": "empty_trash"}                            — очисти корзину / empty trash
-{"action": "show_desktop"}                           — покажи рабочий стол
-{"action": "google_search", "query": "iPhone 17"}   — найди / поищи / search
-{"action": "youtube_search", "query": "котики"}     — найди на youtube / ютубе
-{"action": "open_url", "url": "https://..."}         — открой сайт / ссылку
-{"action": "open_app", "app": "AppName"}             — открой приложение
-{"action": "unknown"}                                — anything else
+For COMMANDS use {"type": "command", "action": "...", ...}:
+{"type": "command", "action": "open_browser"}
+{"type": "command", "action": "open_spotify"}
+{"type": "command", "action": "open_safari"}
+{"type": "command", "action": "open_chrome"}
+{"type": "command", "action": "open_music"}
+{"type": "command", "action": "open_terminal"}
+{"type": "command", "action": "open_finder"}
+{"type": "command", "action": "open_notes"}
+{"type": "command", "action": "open_settings"}
+{"type": "command", "action": "open_slack"}
+{"type": "command", "action": "open_telegram"}
+{"type": "command", "action": "open_zoom"}
+{"type": "command", "action": "open_downloads"}
+{"type": "command", "action": "open_documents"}
+{"type": "command", "action": "mute"}
+{"type": "command", "action": "unmute"}
+{"type": "command", "action": "volume_up"}
+{"type": "command", "action": "volume_down"}
+{"type": "command", "action": "media_pause"}
+{"type": "command", "action": "media_next"}
+{"type": "command", "action": "media_prev"}
+{"type": "command", "action": "screenshot"}
+{"type": "command", "action": "sleep"}
+{"type": "command", "action": "lock_screen"}
+{"type": "command", "action": "restart"}
+{"type": "command", "action": "shutdown"}
+{"type": "command", "action": "empty_trash"}
+{"type": "command", "action": "show_desktop"}
+{"type": "command", "action": "google_search", "query": "..."}
+{"type": "command", "action": "youtube_search", "query": "..."}
+{"type": "command", "action": "open_url", "url": "https://..."}
+{"type": "command", "action": "open_app", "app": "AppName"}
 
-Return ONLY the JSON.
+For QUESTIONS use {"type": "answer", "text": "..."}:
+- Answer in the SAME language as the question
+- Be concise: 1-3 sentences max (it will be spoken aloud)
+- If you don't know or need real-time data, say so briefly
+
+Examples:
+"открой браузер" → {"type": "command", "action": "open_browser"}
+"найди iPhone 17" → {"type": "command", "action": "google_search", "query": "iPhone 17"}
+"сколько планет в солнечной системе?" → {"type": "answer", "text": "В Солнечной системе 8 планет."}
+"что такое машинное обучение?" → {"type": "answer", "text": "Машинное обучение — это раздел ИИ, где алгоритмы обучаются на данных без явного программирования."}
+"what is the capital of France?" → {"type": "answer", "text": "The capital of France is Paris."}
+
+Return ONLY the JSON object.
 """
 
 
@@ -161,8 +273,32 @@ def _osascript(script: str) -> None:
     subprocess.run(["osascript", "-e", script], check=False)
 
 
+# macOS TTS voices per language
+_TTS_VOICE: dict[str, str] = {
+    "ru": "Milena",
+    "en": "Samantha",
+    "he": "Carmit",
+}
+
+
+def _speak(text: str, lang: str = "ru") -> None:
+    if sys.platform == "win32":
+        _win_speak(text, lang)
+        return
+    voice = _TTS_VOICE.get(lang, "Samantha")
+    subprocess.Popen(["say", "-v", voice, text])
+    logger.info("Speaking [%s]: %s", voice, text[:80])
+
+
 def _press_space_after(delay: float) -> None:
-    """Press Space in the frontmost window after a delay (triggers Spotify play)."""
+    """Press Space after a delay to trigger Spotify play (macOS only)."""
+    if sys.platform == "win32":
+        def _do():
+            time.sleep(delay)
+            _win_vk_press(_WIN_VK_MEDIA_PLAY)
+        threading.Thread(target=_do, daemon=True).start()
+        return
+
     def _do():
         time.sleep(delay)
         subprocess.run(
@@ -173,7 +309,8 @@ def _press_space_after(delay: float) -> None:
 
 
 def _confirm(message: str) -> bool:
-    """Show a native macOS dialog. Returns True if user clicks OK."""
+    if sys.platform == "win32":
+        return _win_confirm(message)
     result = subprocess.run(
         ["osascript", "-e",
          f'display dialog "{message}" buttons {{"Отмена", "OK"}} default button "Отмена"'],
@@ -183,13 +320,20 @@ def _confirm(message: str) -> bool:
 
 
 def _resolve_app_name(name: str) -> str:
-    return _APP_MAP.get(name.lower().strip(), name)
+    m = _WIN_APP_MAP if sys.platform == "win32" else _APP_MAP
+    return m.get(name.lower().strip(), name)
 
 
 def _execute(action: dict) -> None:  # noqa: C901
+    if sys.platform == "win32":
+        _execute_win(action)
+    else:
+        _execute_mac(action)
+
+
+def _execute_mac(action: dict) -> None:  # noqa: C901
     name = action.get("action", "unknown")
 
-    # Static app launchers
     _APP_CMDS: dict[str, list[str]] = {
         "open_safari":     ["open", "-a", "Safari"],
         "open_chrome":     ["open", "-a", "Google Chrome"],
@@ -328,6 +472,159 @@ def _execute(action: dict) -> None:  # noqa: C901
         logger.warning("Unhandled action: %s", name)
 
 
+def _execute_win(action: dict) -> None:  # noqa: C901
+    import ctypes
+    from pathlib import Path
+
+    name = action.get("action", "unknown")
+
+    _WIN_EXE_CMDS: dict[str, str] = {
+        "open_chrome":   "chrome",
+        "open_firefox":  "firefox",
+        "open_music":    "wmplayer",
+        "open_terminal": "wt",
+        "open_finder":   "explorer",
+        "open_notes":    "notepad",
+        "open_vscode":   "code",
+        "open_slack":    "slack",
+        "open_telegram": "telegram",
+        "open_zoom":     "zoom",
+    }
+
+    if name == "open_browser":
+        _win_open("https://www.google.com")
+        logger.info("Opened default browser")
+
+    elif name == "open_safari":
+        # Safari doesn't exist on Windows — open default browser
+        _win_open("https://www.google.com")
+        logger.info("Opened default browser (Safari unavailable on Windows)")
+
+    elif name == "open_spotify":
+        _win_open("https://open.spotify.com/")
+        _press_space_after(4.0)
+        logger.info("Opened Spotify web player")
+
+    elif name in _WIN_EXE_CMDS:
+        _win_exe(_WIN_EXE_CMDS[name])
+        logger.info("Executed: %s", name)
+
+    elif name == "open_settings":
+        _win_open("ms-settings:")
+        logger.info("Opened Settings")
+
+    elif name == "open_downloads":
+        _win_open(str(Path.home() / "Downloads"))
+        logger.info("Opened Downloads")
+
+    elif name == "open_documents":
+        _win_open(str(Path.home() / "Documents"))
+        logger.info("Opened Documents")
+
+    elif name == "open_desktop":
+        _win_open(str(Path.home() / "Desktop"))
+        logger.info("Opened Desktop")
+
+    elif name == "open_app":
+        app = _resolve_app_name(action.get("app", ""))
+        if app == "__default_browser__":
+            _win_open("https://www.google.com")
+        elif app == "__spotify__":
+            _win_open("https://open.spotify.com/")
+        elif app.endswith(":"):
+            _win_open(app)
+        else:
+            _win_exe(app)
+        logger.info("Opened app: %s", app)
+
+    elif name == "mute":
+        _win_vk_press(_WIN_VK_MUTE)
+        logger.info("Muted")
+
+    elif name == "unmute":
+        _win_vk_press(_WIN_VK_MUTE)
+        logger.info("Unmuted (toggled mute)")
+
+    elif name == "volume_up":
+        for _ in range(10):
+            _win_vk_press(_WIN_VK_VOL_UP)
+        logger.info("Volume up")
+
+    elif name == "volume_down":
+        for _ in range(10):
+            _win_vk_press(_WIN_VK_VOL_DOWN)
+        logger.info("Volume down")
+
+    elif name == "media_pause":
+        _win_vk_press(_WIN_VK_MEDIA_PLAY)
+        logger.info("Media pause/play")
+
+    elif name == "media_next":
+        _win_vk_press(_WIN_VK_MEDIA_NEXT)
+        logger.info("Media next")
+
+    elif name == "media_prev":
+        _win_vk_press(_WIN_VK_MEDIA_PREV)
+        logger.info("Media prev")
+
+    elif name == "screenshot":
+        _win_screenshot()
+
+    elif name == "sleep":
+        subprocess.Popen("rundll32.exe powrprof.dll,SetSuspendState 0,1,0", shell=True)
+        logger.info("Sleep")
+
+    elif name == "lock_screen":
+        ctypes.windll.user32.LockWorkStation()
+        logger.info("Lock screen")
+
+    elif name == "restart":
+        if _confirm("Перезагрузить компьютер?"):
+            subprocess.run(["shutdown", "/r", "/t", "0"], check=False)
+            logger.info("Restart")
+        else:
+            logger.info("Restart cancelled")
+
+    elif name == "shutdown":
+        if _confirm("Выключить компьютер?"):
+            subprocess.run(["shutdown", "/s", "/t", "0"], check=False)
+            logger.info("Shutdown")
+        else:
+            logger.info("Shutdown cancelled")
+
+    elif name == "empty_trash":
+        # SHERB_NOCONFIRMATION | SHERB_NOPROGRESSUI | SHERB_NOSOUND
+        ctypes.windll.shell32.SHEmptyRecycleBinW(None, None, 0x0007)
+        logger.info("Empty Recycle Bin")
+
+    elif name == "show_desktop":
+        ctypes.windll.user32.keybd_event(_WIN_VK_LWIN, 0, 0, 0)
+        ctypes.windll.user32.keybd_event(_WIN_VK_D, 0, 0, 0)
+        ctypes.windll.user32.keybd_event(_WIN_VK_D, 0, _KEYEVENTF_KEYUP, 0)
+        ctypes.windll.user32.keybd_event(_WIN_VK_LWIN, 0, _KEYEVENTF_KEYUP, 0)
+        logger.info("Show desktop")
+
+    elif name == "google_search":
+        query = action.get("query", "")
+        _win_open(f"https://www.google.com/search?q={quote_plus(query)}")
+        logger.info("Google search: %s", query)
+
+    elif name == "youtube_search":
+        query = action.get("query", "")
+        _win_open(f"https://www.youtube.com/search?query={quote_plus(query)}")
+        logger.info("YouTube search: %s", query)
+
+    elif name == "open_url":
+        _win_open(action.get("url", ""))
+        logger.info("Opened URL: %s", action.get("url"))
+
+    elif name == "unknown":
+        logger.warning("Command not understood")
+
+    else:
+        logger.warning("Unhandled action: %s", name)
+
+
 def _try_simple(text: str) -> bool:
     lower = text.lower()
     for pattern, action in _SIMPLE:
@@ -341,10 +638,10 @@ def _ask_ollama(text: str) -> dict:
     payload = json.dumps({
         "model": OLLAMA_MODEL,
         "system": _SYSTEM_PROMPT,
-        "prompt": f'Command: "{text}"\nJSON:',
+        "prompt": f'Input: "{text}"\nJSON:',
         "stream": False,
         "format": "json",
-        "options": {"temperature": 0.0, "num_predict": 80},
+        "options": {"temperature": 0.1, "num_predict": 200},
     }).encode()
 
     req = urllib.request.Request(
@@ -354,7 +651,7 @@ def _ask_ollama(text: str) -> dict:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with urllib.request.urlopen(req, timeout=20) as resp:
             result = json.loads(resp.read())
             parsed = json.loads(result.get("response", "{}"))
             if parsed.get("action") == "open_app":
@@ -364,18 +661,30 @@ def _ask_ollama(text: str) -> dict:
             return parsed
     except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as exc:
         logger.error("Ollama error: %s", exc)
-        return {"action": "unknown"}
+        return {"type": "command", "action": "unknown"}
 
 
-def handle(text: str) -> bool:
-    """Execute a voice command. Returns True if recognized, False if unknown."""
+def handle(text: str, lang: str = "ru") -> bool:
+    """Handle voice input: execute command or answer question via TTS."""
     if _try_simple(text):
         return True
 
     logger.info("Sending to Ollama: %s", text)
-    action = _ask_ollama(text)
-    logger.info("Ollama result: %s", action)
+    result = _ask_ollama(text)
+    logger.info("Ollama result: %s", result)
 
+    kind = result.get("type", "command")
+
+    if kind == "answer":
+        answer = result.get("text", "")
+        if answer:
+            _speak(answer, lang)
+            return True
+        return False
+
+    # Command
+    action = dict(result)
+    action.pop("type", None)
     if action.get("action") == "unknown":
         logger.warning("Not understood: %s", text)
         return False

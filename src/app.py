@@ -1,4 +1,5 @@
 import logging
+import sys
 import threading
 import time
 from typing import Final
@@ -14,8 +15,12 @@ from modes import MIN_RECORD_SEC, SAMPLE_RATE
 from paste_util import accessibility_binary, has_accessibility, paste_text
 from transcription import Transcriber
 
-COMMAND_KEY: Final[Key] = Key.cmd_r   # hold → voice command
-TEXT_KEY: Final[Key] = Key.alt_r      # hold → transcribe + paste
+if sys.platform == "win32":
+    COMMAND_KEY: Final[Key] = Key.ctrl_r  # hold → voice command
+    TEXT_KEY: Final[Key]    = Key.alt_r   # hold → transcribe + paste
+else:
+    COMMAND_KEY: Final[Key] = Key.cmd_r   # hold → voice command
+    TEXT_KEY: Final[Key]    = Key.alt_r   # hold → transcribe + paste
 
 logger = logging.getLogger(__name__)
 
@@ -46,19 +51,23 @@ class VoiceInputApp:
         self._transcriber.warm_up()
 
         ax_ok = has_accessibility()
-        logger.info(
-            "Ready. cmd_r=command · alt_r=text | accessibility: %s",
-            "yes" if ax_ok else "no (paste disabled)",
-        )
-        if not ax_ok:
-            logger.warning(
-                "Add to Accessibility: System Settings > Privacy & Security > Accessibility"
+        if sys.platform == "win32":
+            logger.info("Ready. ctrl_r=command · alt_r=text")
+            self._feedback.notify("Voice Input", "Ready · RCtrl=command · RAlt=text")
+        else:
+            logger.info(
+                "Ready. cmd_r=command · alt_r=text | accessibility: %s",
+                "yes" if ax_ok else "no (paste disabled)",
             )
-            logger.warning("Binary: %s", accessibility_binary())
-        self._feedback.notify(
-            "Voice Input",
-            "Ready · Cmd=command · Opt=text" + ("" if ax_ok else " · no paste"),
-        )
+            if not ax_ok:
+                logger.warning(
+                    "Add to Accessibility: System Settings > Privacy & Security > Accessibility"
+                )
+                logger.warning("Binary: %s", accessibility_binary())
+            self._feedback.notify(
+                "Voice Input",
+                "Ready · Cmd=command · Opt=text" + ("" if ax_ok else " · no paste"),
+            )
         self._config.watch(self._on_config_change)
         self._run_listener()
 
@@ -148,7 +157,7 @@ class VoiceInputApp:
 
             if is_command:
                 from command_executor import handle as execute_command
-                recognized = execute_command(text)
+                recognized = execute_command(text, lang=m.language)
                 self._feedback.play("Pop" if recognized else "Funk")
             else:
                 pasted = paste_text(text)

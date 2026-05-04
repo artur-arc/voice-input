@@ -3,7 +3,8 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-04
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`3090050`](https://github.com/artur-arc/voice-input/commit/30900505076202e2ac2c9ba370c2038b67f1e099) Split command and text modes, improve configuration
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`014bbee`](https://github.com/artur-arc/voice-input/commit/014bbeecc7dc767dcb7bd91e2722a11a5e93399d) Consolidate command handling and
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`7e9e059`](https://github.com/artur-arc/voice-input/commit/7e9e059464d9e59ec15459becbace7ddba057430) Split command and text modes, improve configuration
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`1219e84`](https://github.com/artur-arc/voice-input/commit/1219e840fdce659c671681fe8743fdf5398325bb) Update voice command handling for multiple languages
 - ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`194ae3c`](https://github.com/artur-arc/voice-input/commit/194ae3cd40d16326f27d7f3c3db9d1355f2e5a63) Add voice command execution for Russian and English
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`f26ee96`](https://github.com/artur-arc/voice-input/commit/f26ee96228aaee286db4a5bf0cc2ff054817cc5d) Update README and config for new Hebrew modes
