@@ -158,12 +158,17 @@ class VoiceInputApp:
             elapsed = time.time() - t0
             logger.info("[%.1fs] [%s] %s", elapsed, m.label, text)
 
-            pasted = paste_text(text)
-            if not pasted:
-                logger.warning(
-                    "Text placed in clipboard — grant Accessibility to enable auto-paste"
-                )
-            self._feedback.play("Pop")
+            if m.key.startswith("command"):
+                from command_executor import handle as execute_command
+                recognized = execute_command(text)
+                self._feedback.play("Pop" if recognized else "Funk")
+            else:
+                pasted = paste_text(text)
+                if not pasted:
+                    logger.warning(
+                        "Text placed in clipboard — grant Accessibility to enable auto-paste"
+                    )
+                self._feedback.play("Pop")
         except Exception:
             logger.exception("Transcription/paste error")
             self._feedback.play("Funk")

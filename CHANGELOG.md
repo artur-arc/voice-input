@@ -3,7 +3,8 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-04
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`bcba6b8`](https://github.com/artur-arc/voice-input/commit/bcba6b8a830b48114c2ec118c487362f1cab1cd7) Update README and config for new Hebrew modes
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`28c2039`](https://github.com/artur-arc/voice-input/commit/28c203972ab65236b6bbcced013cae29bec74fc4) Add voice command execution for Russian and English
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`f26ee96`](https://github.com/artur-arc/voice-input/commit/f26ee96228aaee286db4a5bf0cc2ff054817cc5d) Update README and config for new Hebrew modes
 
 ## v1.0.52 — 2026-05-04
 ### 2026-05-04

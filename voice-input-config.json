@@ -4,7 +4,9 @@
         "russian-english": false,
         "russian-russian": true,
         "hebrew-english": false,
-        "hebrew-hebrew": false
+        "hebrew-hebrew": false,
+        "command-russian": false,
+        "command-english": false
     },
     "input_device": null,
     "sounds_enabled": true,
