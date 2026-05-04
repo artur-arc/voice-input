@@ -229,7 +229,7 @@ class _WindowsUpdater:
                         repo_resolved = self._repo.resolve()
                         for member in zf.namelist():
                             dest = (self._repo / member).resolve()
-                            if not str(dest).startswith(str(repo_resolved)):
+                            if not dest.is_relative_to(repo_resolved):
                                 raise ValueError(f"Zip path traversal blocked: {member}")
                         zf.extractall(self._repo)
                 venv_pip = self._repo / ".venv" / "Scripts" / "pip.exe"
@@ -372,6 +372,8 @@ class VoiceInputTray:
             logger.info("RECORD_KEY released — stopping recording")
             active_hwnd = ctypes.windll.user32.GetForegroundWindow()
             audio = self._recorder.stop()
+            if len(audio) < SAMPLE_RATE * MIN_RECORD_SEC:
+                return
             threading.Thread(
                 target=self._transcribe_and_paste,
                 args=(audio, active_hwnd),
@@ -622,10 +624,11 @@ class VoiceInputTray:
         # Delete the app folder after the tray process exits via a detached batch script.
         # Extra 2-second wait after PID disappears lets OS release any remaining file handles.
         # Retry loop (up to 5 attempts) handles transient locks from the dying venv.
-        repo = str(self._repo_dir)
         pid = os.getpid()
         fd, tmp_path = tempfile.mkstemp(suffix=".bat", prefix="vi_uninstall_")
         os.close(fd)
+        # Repo path passed via env var (VI_REPO) — avoids cmd.exe OEM codepage
+        # mangling of non-ASCII characters (e.g. Cyrillic usernames) in the bat body.
         Path(tmp_path).write_text(
             "@echo off\n"
             ":wait\n"
@@ -634,17 +637,20 @@ class VoiceInputTray:
             "timeout /t 2 /nobreak >nul\n"
             "set retries=5\n"
             ":retry\n"
-            f"rmdir /s /q \"{repo}\" 2>nul\n"
-            f"if not exist \"{repo}\" goto done\n"
+            "rmdir /s /q \"%VI_REPO%\" 2>nul\n"
+            "if not exist \"%VI_REPO%\" goto done\n"
             "set /a retries-=1\n"
             "if %retries% gtr 0 (timeout /t 2 /nobreak >nul & goto retry)\n"
             ":done\n"
             "del \"%~f0\"\n",
             encoding="utf-8",
         )
+        env = os.environ.copy()
+        env["VI_REPO"] = str(self._repo_dir)
         subprocess.Popen(
             ["cmd.exe", "/c", tmp_path],
             creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NO_WINDOW,
+            env=env,
         )
         icon.stop()
 

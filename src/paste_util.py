@@ -153,10 +153,12 @@ def _win_write_clipboard(text: str) -> None:
     k32.GlobalUnlock(h)
 
     if not u32.OpenClipboard(0):
+        k32.GlobalFree(h)
         raise OSError("OpenClipboard failed")
     try:
         u32.EmptyClipboard()
         if not u32.SetClipboardData(CF_UNICODETEXT, h):
+            k32.GlobalFree(h)
             raise OSError("SetClipboardData failed")
     finally:
         u32.CloseClipboard()

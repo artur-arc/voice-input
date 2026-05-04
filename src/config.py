@@ -19,6 +19,7 @@ class ConfigManager:
         self._input_device: str | None = None
         self._sounds_enabled: bool = True
         self._notifications_enabled: bool = True
+        self._model_name: str | None = None
         self._watch_thread: threading.Thread | None = None
 
     def load(self) -> None:
@@ -32,17 +33,19 @@ class ConfigManager:
                     new_mode_index = i
                     break
 
-            # input_device lives at top level (outside voiceInputConfig)
-            new_input_device = raw.get("input_device") if "voiceInputConfig" in raw else None
+            # input_device lives at top level (outside voiceInputConfig) in all formats
+            new_input_device = raw.get("input_device")
 
             new_sounds = bool(raw.get("sounds_enabled", True))
             new_notifications = bool(raw.get("notifications_enabled", True))
+            new_model = raw.get("selected_model") or None
 
             with self._lock:
                 self._mode_index = new_mode_index
                 self._input_device = new_input_device
                 self._sounds_enabled = new_sounds
                 self._notifications_enabled = new_notifications
+                self._model_name = new_model
         except Exception:
             logger.exception("Config load error")
 
@@ -97,6 +100,23 @@ class ConfigManager:
         self._config_file.write_text(json.dumps(raw, indent=4))
         with self._lock:
             self._sounds_enabled = enabled
+
+    def model_name(self) -> str | None:
+        with self._lock:
+            return self._model_name
+
+    def save_model_name(self, name: str | None) -> None:
+        try:
+            raw: dict[str, Any] = json.loads(self._config_file.read_text())
+        except Exception:
+            raw = {}
+        if name is None:
+            raw.pop("selected_model", None)
+        else:
+            raw["selected_model"] = name
+        self._config_file.write_text(json.dumps(raw, indent=4))
+        with self._lock:
+            self._model_name = name
 
     def save_notifications_enabled(self, enabled: bool) -> None:
         try:

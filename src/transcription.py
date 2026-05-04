@@ -12,6 +12,7 @@ import sys
 import threading
 from abc import ABC, abstractmethod
 from pathlib import Path
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -69,7 +70,7 @@ class Transcriber(ABC):
     - Windows: ``_WindowsTranscriber`` using faster-whisper (CPU, int8)
     """
 
-    def __new__(cls, model_repo: str = MODEL_REPO) -> "Transcriber":
+    def __new__(cls, model_repo: str = MODEL_REPO, **kwargs: object) -> "Transcriber":
         if cls is Transcriber:
             impl = _WindowsTranscriber if sys.platform == "win32" else _MacTranscriber
             return super().__new__(impl)
@@ -85,6 +86,13 @@ class Transcriber(ABC):
 
     def shutdown(self) -> None:
         """Release resources before process exit. No-op on macOS."""
+
+    def available_models(self) -> list[str]:
+        """Return model names available on disk, best-first. Empty on macOS."""
+        return []
+
+    def switch_model(self, name: str) -> None:
+        """Switch to a different model (Windows only). No-op on macOS."""
 
     @abstractmethod
     def warm_up(self) -> None: ...
@@ -150,13 +158,24 @@ _WORKER_SCRIPT = Path(__file__).parent / "transcription_worker.py"
 class _WindowsTranscriber(Transcriber):
     """pywhispercpp (whisper.cpp) backend — no ctranslate2, runs in isolated subprocess."""
 
-    def __init__(self, model_repo: str = MODEL_REPO) -> None:
-        self._model_name = _detect_win_model()
+    _MODEL_ORDER: list[str] = ["large-v3-q5_0", "medium-q5_0", "tiny"]
+
+    def __init__(
+        self,
+        model_repo: str = MODEL_REPO,
+        initial_model: str | None = None,
+        on_fallback: "Callable[[str, str], None] | None" = None,
+    ) -> None:
+        if initial_model and (_MODELS_DIR / f"ggml-{initial_model}.bin").exists():
+            self._model_name = initial_model
+        else:
+            self._model_name = _detect_win_model()
         self._model_path = str(_MODELS_DIR / f"ggml-{self._model_name}.bin")
         self._proc: subprocess.Popen[bytes] | None = None
         self._ready = threading.Event()
         self._load_error: str | None = None
         self._io_lock = threading.Lock()
+        self._on_fallback = on_fallback
         logger.info("Windows model selected: %s", self._model_name)
 
     @property
@@ -165,6 +184,20 @@ class _WindowsTranscriber(Transcriber):
 
     def is_ready(self) -> bool:
         return self._ready.is_set()
+
+    def available_models(self) -> list[str]:
+        return [n for n in self._MODEL_ORDER if (_MODELS_DIR / f"ggml-{n}.bin").exists()]
+
+    def switch_model(self, name: str) -> None:
+        """Terminate current worker and set new model; caller must trigger warm_up()."""
+        if self._model_name == name:
+            return
+        self.shutdown()
+        self._model_name = name
+        self._model_path = str(_MODELS_DIR / f"ggml-{name}.bin")
+        self._load_error = None
+        self._ready.clear()
+        logger.info("Model switch: → %s", name)
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -208,6 +241,18 @@ class _WindowsTranscriber(Transcriber):
         except Exception as exc:
             logger.error("Failed to start worker process: %s", exc)
             return None
+
+        # Drain stderr continuously — prevents 64 KB pipe buffer deadlock
+        # if the worker writes diagnostics while we block reading stdout.
+        def _drain_stderr() -> None:
+            try:
+                if proc.stderr:
+                    for _ in proc.stderr:
+                        pass
+            except Exception:
+                pass
+
+        threading.Thread(target=_drain_stderr, daemon=True).start()
 
         try:
             self._ws(proc, self._model_path)
@@ -284,7 +329,7 @@ class _WindowsTranscriber(Transcriber):
                     self._proc = None
                     self._ready.clear()  # block callers until fallback is ready
                     if self._model_name != "tiny":
-                        threading.Thread(target=self._switch_to_tiny, daemon=True).start()
+                        threading.Thread(target=self._fallback_model, daemon=True).start()
                     return None
                 return result or None
             except Exception as exc:
@@ -312,16 +357,33 @@ class _WindowsTranscriber(Transcriber):
 
     # ── Model fallback ────────────────────────────────────────────────────────
 
-    def _switch_to_tiny(self) -> None:
+    def _fallback_model(self) -> None:
+        """Step down to the next lighter model; called after transcription timeout."""
+        available = self.available_models()
+        try:
+            current_idx = available.index(self._model_name)
+        except ValueError:
+            current_idx = 0
+        next_candidates = available[current_idx + 1:]
+        if not next_candidates:
+            logger.warning("Already on lightest model (%s) — cannot fall back further", self._model_name)
+            self._ready.set()
+            return
+        next_model = next_candidates[0]
         prev = self._model_name
-        self._model_name = "tiny"
-        self._model_path = str(_MODELS_DIR / "ggml-tiny.bin")
+        self._model_name = next_model
+        self._model_path = str(_MODELS_DIR / f"ggml-{next_model}.bin")
         self._load_error = None
         # _ready was already cleared by transcribe() before this thread was spawned
-        logger.warning("Model fallback: %s → tiny (CPU too slow for primary model)", prev)
+        logger.warning("Model fallback: %s → %s (CPU too slow)", prev, next_model)
+        if self._on_fallback:
+            try:
+                self._on_fallback(prev, next_model)
+            except Exception:
+                pass
         self.warm_up()
         if self._load_error:
-            logger.error("Tiny model fallback also failed: %s", self._load_error)
+            logger.error("Fallback model also failed: %s", self._load_error)
 
     # ── IPC helpers ───────────────────────────────────────────────────────────
 
