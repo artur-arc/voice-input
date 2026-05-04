@@ -19,21 +19,32 @@ class UserFeedback(ABC):
     - Windows: ``_WindowsFeedback`` using winsound and plyer
     """
 
+    sounds_enabled: bool = True
+    notifications_enabled: bool = True
+
     def __new__(cls) -> "UserFeedback":
         if cls is UserFeedback:
             impl = _WindowsFeedback if sys.platform == "win32" else _MacFeedback
             return super().__new__(impl)
         return super().__new__(cls)
 
-    @abstractmethod
-    def notify(self, title: str, message: str) -> None: ...
+    def notify(self, title: str, message: str) -> None:
+        if self.notifications_enabled:
+            self._notify(title, message)
+
+    def play(self, sound: str) -> None:
+        if self.sounds_enabled:
+            self._play(sound)
 
     @abstractmethod
-    def play(self, sound: str) -> None: ...
+    def _notify(self, title: str, message: str) -> None: ...
+
+    @abstractmethod
+    def _play(self, sound: str) -> None: ...
 
 
 class _MacFeedback(UserFeedback):
-    def notify(self, title: str, message: str) -> None:
+    def _notify(self, title: str, message: str) -> None:
         safe_title = title.replace('"', '\\"')
         safe_msg = message.replace('"', '\\"')
         try:
@@ -45,7 +56,7 @@ class _MacFeedback(UserFeedback):
         except Exception:
             logger.exception("Failed to send system notification")
 
-    def play(self, sound: str) -> None:
+    def _play(self, sound: str) -> None:
         try:
             subprocess.Popen(
                 ["afplay", f"/System/Library/Sounds/{sound}.aiff"],
@@ -63,14 +74,14 @@ class _WindowsFeedback(UserFeedback):
     def set_notify_icon(self, icon: Any) -> None:
         self._icon = icon
 
-    def notify(self, title: str, message: str) -> None:
+    def _notify(self, title: str, message: str) -> None:
         try:
             from plyer import notification  # type: ignore[import]
             notification.notify(title=title, message=message, app_name="Voice Input", timeout=4)
         except Exception:
             logger.exception("Windows notification failed")
 
-    def play(self, sound: str) -> None:
+    def _play(self, sound: str) -> None:
         try:
             import winsound  # lazy — stdlib on Windows, unavailable on macOS
             alias = winsound.MB_ICONHAND if sound == "Funk" else winsound.MB_OK

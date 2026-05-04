@@ -3,7 +3,8 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-04
-- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`a35ff39`](https://github.com/artur-arc/voice-input/commit/a35ff399258cebd1bb41ceacd2fe387bd8aaf54e) Update whisper model and Python version requirement
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`24ca6ce`](https://github.com/artur-arc/voice-input/commit/24ca6ce852ca3e1e5ffcf714e611bb50b0464e90) Enable/disable sounds and notifications in config
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`b6fb582`](https://github.com/artur-arc/voice-input/commit/b6fb582ae332d64ccb1d8d1ef04291bd744eac7d) Update whisper model and Python version requirement
 
 ## v1.0.49 — 2026-05-04
 ### 2026-05-04

@@ -266,6 +266,17 @@ class VoiceInputMenuBar(rumps.App):
 
         items.append(None)
 
+        # ── Sound & Notifications toggles ─────────────────────────────────────
+        sounds_item = rumps.MenuItem("Sound Effects", callback=self._on_toggle_sounds)
+        sounds_item.state = 1 if self._config.sounds_enabled() else 0
+        items.append(sounds_item)
+
+        notif_item = rumps.MenuItem("Notifications", callback=self._on_toggle_notifications)
+        notif_item.state = 1 if self._config.notifications_enabled() else 0
+        items.append(notif_item)
+
+        items.append(None)
+
         # ── Version + Restart to Update ───────────────────────────────────────
         ver_item = rumps.MenuItem(f"Version {local_ver}", callback=self._on_about)
         items.append(ver_item)
@@ -290,6 +301,14 @@ class VoiceInputMenuBar(rumps.App):
     def _on_device(self, sender: rumps.MenuItem) -> None:
         name = None if sender.title == "Auto-select" else sender.title
         self._config.save_device(name)
+        self._refresh()
+
+    def _on_toggle_sounds(self, _: rumps.MenuItem) -> None:
+        self._config.save_sounds_enabled(not self._config.sounds_enabled())
+        self._refresh()
+
+    def _on_toggle_notifications(self, _: rumps.MenuItem) -> None:
+        self._config.save_notifications_enabled(not self._config.notifications_enabled())
         self._refresh()
 
     def _on_config_changed(self, _index: int) -> None:

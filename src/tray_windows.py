@@ -291,6 +291,8 @@ class VoiceInputTray:
         self._loading_notified = False  # show "waiting for model" only once
 
         self._config.load()
+        self._feedback.sounds_enabled = self._config.sounds_enabled()
+        self._feedback.notifications_enabled = self._config.notifications_enabled()
 
         icon_image = _load_icon()
         mode = self._config.current_mode()
@@ -477,6 +479,21 @@ class VoiceInputTray:
         items.append(pystray.Menu.SEPARATOR)
 
         items.append(pystray.MenuItem(
+            "Sound Effects",
+            lambda *_: self._on_toggle_sounds(),
+            checked=lambda _: self._config.sounds_enabled(),
+            default=False,
+        ))
+        items.append(pystray.MenuItem(
+            "Notifications",
+            lambda *_: self._on_toggle_notifications(),
+            checked=lambda _: self._config.notifications_enabled(),
+            default=False,
+        ))
+
+        items.append(pystray.Menu.SEPARATOR)
+
+        items.append(pystray.MenuItem(
             f"Version {local_ver}",
             lambda *_: os.startfile(_GITHUB_URL),
             default=False,
@@ -513,7 +530,29 @@ class VoiceInputTray:
         except Exception:
             pass
 
+    def _on_toggle_sounds(self) -> None:
+        enabled = not self._config.sounds_enabled()
+        self._config.save_sounds_enabled(enabled)
+        self._feedback.sounds_enabled = enabled
+        self._icon.menu = self._build_menu()
+        try:
+            self._icon.update_menu()
+        except Exception:
+            pass
+
+    def _on_toggle_notifications(self) -> None:
+        enabled = not self._config.notifications_enabled()
+        self._config.save_notifications_enabled(enabled)
+        self._feedback.notifications_enabled = enabled
+        self._icon.menu = self._build_menu()
+        try:
+            self._icon.update_menu()
+        except Exception:
+            pass
+
     def _on_config_changed(self, _index: int) -> None:
+        self._feedback.sounds_enabled = self._config.sounds_enabled()
+        self._feedback.notifications_enabled = self._config.notifications_enabled()
         mode = self._config.current_mode()
         self._icon.title = f"Voice Input — {mode.label}"
         self._icon.menu = self._build_menu()

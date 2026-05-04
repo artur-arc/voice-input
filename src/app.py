@@ -38,6 +38,8 @@ class VoiceInputApp:
 
     def start(self) -> None:
         self._config.load()
+        self._feedback.sounds_enabled = self._config.sounds_enabled()
+        self._feedback.notifications_enabled = self._config.notifications_enabled()
         self._log_device_info()
         logger.info("Loading %s...", self._transcriber.model_repo)
         self._transcriber.warm_up()
@@ -160,3 +162,5 @@ class VoiceInputApp:
 
     def _on_config_change(self, _index: int) -> None:
         logger.info("Config reloaded → mode: %s", self._config.current_mode().label)
+        self._feedback.sounds_enabled = self._config.sounds_enabled()
+        self._feedback.notifications_enabled = self._config.notifications_enabled()
