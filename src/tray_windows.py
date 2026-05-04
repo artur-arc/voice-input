@@ -38,6 +38,12 @@ _WIN_PERM_URLS: dict[str, str] = {
     "Keyboard hooks": "ms-settings:privacy-keyboard",
 }
 
+_MODEL_LABELS: dict[str, str] = {
+    "large-v3-q5_0": "Large (1.1 GB)",
+    "medium-q5_0":   "Medium (514 MB)",
+    "tiny":          "Tiny (75 MB)",
+}
+
 from pynput.keyboard import Key, Listener
 
 RECORD_KEY: Key = Key.ctrl_r
@@ -465,13 +471,29 @@ class VoiceInputTray:
             ))
         items.append(pystray.MenuItem("Microphone", pystray.Menu(*mic_items), default=False))
 
-        # Model (informational)
-        model_name = self._transcriber.model_repo
-        items.append(pystray.MenuItem(
-            "Model",
-            pystray.Menu(pystray.MenuItem(model_name, None, enabled=False)),
-            default=False,
-        ))
+        # Model selector (radio) — only shown when multiple models are on disk
+        available_models = self._transcriber.available_models()
+        if len(available_models) > 1:
+            model_items: list[Any] = []
+            for _m in available_models:
+                _label = _MODEL_LABELS.get(_m, _m)
+                model_items.append(pystray.MenuItem(
+                    _label,
+                    (lambda m: lambda icon, item: self._on_model(m))(_m),
+                    checked=(lambda m: lambda item: self._transcriber.model_repo == m)(_m),
+                    radio=True,
+                    default=False,
+                ))
+            items.append(pystray.MenuItem("Model", pystray.Menu(*model_items), default=False))
+        else:
+            model_name = self._transcriber.model_repo
+            items.append(pystray.MenuItem(
+                "Model",
+                pystray.Menu(pystray.MenuItem(
+                    _MODEL_LABELS.get(model_name, model_name), None, enabled=False
+                )),
+                default=False,
+            ))
 
         items.append(pystray.Menu.SEPARATOR)
 
@@ -537,6 +559,33 @@ class VoiceInputTray:
 
     def _on_device(self, name: str | None) -> None:
         self._config.save_device(name)
+        self._icon.menu = self._build_menu()
+        try:
+            self._icon.update_menu()
+        except Exception:
+            pass
+
+    def _on_model(self, name: str) -> None:
+        if self._transcriber.model_repo == name:
+            return
+        self._config.save_model_name(name)
+        self._transcriber.switch_model(name)
+        self._icon.menu = self._build_menu()
+        try:
+            self._icon.update_menu()
+        except Exception:
+            pass
+        threading.Thread(target=self._warm_up, daemon=True).start()
+
+    def _on_model_fallback(self, from_model: str, to_model: str) -> None:
+        from_label = _MODEL_LABELS.get(from_model, from_model)
+        to_label = _MODEL_LABELS.get(to_model, to_model)
+        logger.warning("Auto-fallback: %s → %s", from_model, to_model)
+        self._config.save_model_name(to_model)
+        self._feedback.notify(
+            "Voice Input — Model Switch",
+            f"{from_label} was too slow — switched to {to_label}",
+        )
         self._icon.menu = self._build_menu()
         try:
             self._icon.update_menu()
@@ -687,13 +736,26 @@ def main() -> None:
                 _read_version(_VERSION_FILE), _os.getpid())
     try:
         config = ConfigManager(_CONFIG_FILE)
-        VoiceInputTray(
+        config.load()
+        saved_model = config.model_name()
+
+        # on_fallback is wired after tray creation — use a mutable cell for late binding
+        tray_cell: list[VoiceInputTray] = []
+
+        def _on_fallback(from_m: str, to_m: str) -> None:
+            if tray_cell:
+                tray_cell[0]._on_model_fallback(from_m, to_m)
+
+        transcriber = Transcriber(initial_model=saved_model, on_fallback=_on_fallback)
+        tray = VoiceInputTray(
             config=config,
             recorder=AudioRecorder(),
-            transcriber=Transcriber(),  # uses large-v3 on Windows; MODEL_REPO is mlx-only
+            transcriber=transcriber,
             feedback=UserFeedback(),
             repo_dir=_REPO_DIR,
-        ).run()
+        )
+        tray_cell.append(tray)
+        tray.run()
         logger.info("=== Windows tray exited normally ===")
     except Exception:
         logger.exception("=== CRASH: unhandled exception in tray main ===")

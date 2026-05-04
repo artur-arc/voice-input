@@ -322,14 +322,13 @@ class _WindowsTranscriber(Transcriber):
                 result = self._rs(self._proc, timeout=_TRANSCRIBE_TIMEOUT)
                 if result is None:
                     logger.warning(
-                        "Transcription timed out after %ds — killing worker, switching to tiny",
+                        "Transcription timed out after %ds — killing worker, falling back",
                         _TRANSCRIBE_TIMEOUT,
                     )
                     self._terminate(self._proc)
                     self._proc = None
                     self._ready.clear()  # block callers until fallback is ready
-                    if self._model_name != "tiny":
-                        threading.Thread(target=self._fallback_model, daemon=True).start()
+                    threading.Thread(target=self._fallback_model, daemon=True).start()
                     return None
                 return result or None
             except Exception as exc:

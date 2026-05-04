@@ -3,7 +3,8 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-04
-- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`c1b4110`](https://github.com/artur-arc/voice-input/commit/c1b4110acfd77e4f8d255c6401e46968536b4c82) Add model name support and management
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`d28a9fc`](https://github.com/artur-arc/voice-input/commit/d28a9fccc328fe6e881c2c67f5affa2f72a56b7f) Fix transcription timeout and model switching
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`f392363`](https://github.com/artur-arc/voice-input/commit/f392363207260325bd37b913fef0553aee8a7878) Add model name support and management
 
 ## v1.0.50 — 2026-05-04
 ### 2026-05-04
