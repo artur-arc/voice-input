@@ -1,8 +1,12 @@
 {
     "voiceInputConfig": {
+        "english-english": false,
         "russian-english": false,
         "russian-russian": true,
-        "english-english": false
+        "hebrew-english": false,
+        "hebrew-hebrew": false
     },
-    "input_device": "EMEET SmartCam S600"
+    "input_device": null,
+    "sounds_enabled": true,
+    "notifications_enabled": true
 }
