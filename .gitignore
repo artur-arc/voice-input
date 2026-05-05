@@ -4,3 +4,4 @@ __pycache__/
 *.log
 .claude
 .env
+src/command_executor.py
