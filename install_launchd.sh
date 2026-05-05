@@ -9,6 +9,9 @@ set -e
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Load .env if present (picks up VOICE_COMMAND_KEY, ANTHROPIC_API_KEY, etc.)
+[ -f "$DIR/.env" ] && set -a && source "$DIR/.env" && set +a
+
 PLIST_DST="$HOME/Library/LaunchAgents/com.user.voice-input.plist"
 LABEL="com.user.voice-input"
 
@@ -25,6 +28,11 @@ generate_plist() {
     if [ -n "$ANTHROPIC_API_KEY" ]; then
         api_key_entry="        <key>ANTHROPIC_API_KEY</key>
         <string>$ANTHROPIC_API_KEY</string>"
+    fi
+    local voice_key_entry=""
+    if [ -n "$VOICE_COMMAND_KEY" ]; then
+        voice_key_entry="        <key>VOICE_COMMAND_KEY</key>
+        <string>$VOICE_COMMAND_KEY</string>"
     fi
     cat > "$PLIST_DST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -56,6 +64,7 @@ generate_plist() {
         <key>PATH</key>
         <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
 $api_key_entry
+$voice_key_entry
     </dict>
 </dict>
 </plist>

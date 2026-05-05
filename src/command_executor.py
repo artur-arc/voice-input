@@ -666,6 +666,9 @@ def _ask_ollama(text: str) -> dict:
 
 def handle(text: str, lang: str = "ru") -> bool:
     """Handle voice input: execute command or answer question via TTS."""
+    if not os.getenv("VOICE_COMMAND_KEY"):
+        logger.warning("VOICE_COMMAND_KEY not set — commands disabled")
+        return False
     if _try_simple(text):
         return True
 

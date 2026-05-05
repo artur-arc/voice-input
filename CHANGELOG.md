@@ -3,7 +3,8 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-05
-- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`202e0e3`](https://github.com/artur-arc/voice-input/commit/202e0e306d868d1cfdf00f0fa1dd9bea9ca4e628) Enable/disble commands based on config
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`17c749a`](https://github.com/artur-arc/voice-input/commit/17c749af5cb17fa51ee4e418a82e86d1622f1b71) Disable commands if VOICE_COMMAND_KEY is not
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`42b092c`](https://github.com/artur-arc/voice-input/commit/42b092c24401c51e4b316b5040e6ca5549b9a361) Enable/disble commands based on config
 ### 2026-05-04
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`d9ec6d4`](https://github.com/artur-arc/voice-input/commit/d9ec6d40549c11e37ce0a6cbcf57401eda0617f3) Remove trailing newline from config file
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`c278820`](https://github.com/artur-arc/voice-input/commit/c278820aa3fe2ff1916dc6a392989e8829fe27bd) Consolidate command handling and

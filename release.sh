@@ -17,7 +17,9 @@ touch .git/hooks/.cliff-running
 git-cliff --config cliff.toml --tag "$TAG" -o CHANGELOG.md
 rm -f .git/hooks/.cliff-running
 
-# ── Stage everything & commit ─────────────────────────────────────────────────
+# ── Stage everything & commit (commands_enabled always false in release) ──────
+jq '.commands_enabled = false' voice-input-config.json > /tmp/_release_config.json \
+  && mv /tmp/_release_config.json voice-input-config.json
 git add -A
 git commit -m "chore: release $TAG"
 
@@ -67,6 +69,11 @@ gh release create "$TAG" \
 
 rm -f "$ZIP_NAME"
 
+# ── Restore local config for personal use ────────────────────────────────────
+jq '.commands_enabled = true' voice-input-config.json > /tmp/_restore_config.json \
+  && mv /tmp/_restore_config.json voice-input-config.json
+
 echo ""
 echo "✅ Released $TAG and published to GitHub!"
 echo "📦 Pro build (not uploaded): $(pwd)/$ZIP_PRO"
+echo "🔧 Local config restored: commands_enabled = true"

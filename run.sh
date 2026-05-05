@@ -2,6 +2,9 @@
 set -e
 cd "$(dirname "$0")"
 
+# Load .env if present
+[ -f .env ] && set -a && source .env && set +a
+
 echo "$(date '+%Y-%m-%d %H:%M:%S') [INFO] run.sh: starting voice-input" >&2
 
 REQ_HASH=$(md5 -q requirements.txt 2>/dev/null || md5sum requirements.txt | cut -d' ' -f1)
