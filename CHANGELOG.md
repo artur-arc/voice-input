@@ -3,7 +3,7 @@
 All notable changes to voice-input.
 ## [unreleased]
 ### 2026-05-05
-- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`14af6ad`](https://github.com/artur-arc/voice-input/commit/14af6adb4d451aac235d6005c7d8a542c0834bd0) Update command executor script
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`4bacff1`](https://github.com/artur-arc/voice-input/commit/4bacff146e0676a427a11a89731d5f82dfe663d7) Update command executor script
 - ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`8bc084a`](https://github.com/artur-arc/voice-input/commit/8bc084a91c8b2442767a16baa24acbd349faa690) Disable commands if VOICE_COMMAND_KEY is not
 - ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`42b092c`](https://github.com/artur-arc/voice-input/commit/42b092c24401c51e4b316b5040e6ca5549b9a361) Enable/disble commands based on config
 ### 2026-05-04

@@ -1,16 +1,16 @@
 {
-    "languages": {
-        "russian-english": false,
-        "russian-russian": true,
-        "english-english": false,
-        "hebrew-english": false,
-        "hebrew-hebrew": false
-    },
-    "commands": {
-        "language": "auto"
-    },
-    "commands_enabled": true,
-    "input_device": "EMEET SmartCam S600",
-    "sounds_enabled": true,
-    "notifications_enabled": true
+  "languages": {
+    "russian-english": false,
+    "russian-russian": true,
+    "english-english": false,
+    "hebrew-english": false,
+    "hebrew-hebrew": false
+  },
+  "commands": {
+    "language": "auto"
+  },
+  "commands_enabled": false,
+  "input_device": "EMEET SmartCam S600",
+  "sounds_enabled": true,
+  "notifications_enabled": true
 }
