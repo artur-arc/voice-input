@@ -21,6 +21,7 @@ class ConfigManager:
         self._notifications_enabled: bool = True
         self._model_name: str | None = None
         self._command_lang: str = "auto"   # "auto" | "ru" | "en" | "he"
+        self._commands_enabled: bool = False
         self._watch_thread: threading.Thread | None = None
 
     def load(self) -> None:
@@ -41,6 +42,7 @@ class ConfigManager:
             new_notifications = bool(raw.get("notifications_enabled", True))
             new_model = raw.get("selected_model") or None
             new_cmd_lang = raw.get("commands", {}).get("language", "auto")
+            new_commands_enabled = bool(raw.get("commands_enabled", False))
 
             with self._lock:
                 self._mode_index = new_mode_index
@@ -49,6 +51,7 @@ class ConfigManager:
                 self._notifications_enabled = new_notifications
                 self._model_name = new_model
                 self._command_lang = new_cmd_lang
+                self._commands_enabled = new_commands_enabled
         except Exception:
             logger.exception("Config load error")
 
@@ -132,6 +135,10 @@ class ConfigManager:
     def command_lang(self) -> str:
         with self._lock:
             return self._command_lang
+
+    def commands_enabled(self) -> bool:
+        with self._lock:
+            return self._commands_enabled
 
     def save_command_lang(self, lang: str) -> None:
         try:

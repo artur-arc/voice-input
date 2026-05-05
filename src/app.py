@@ -51,12 +51,16 @@ class VoiceInputApp:
         self._transcriber.warm_up()
 
         ax_ok = has_accessibility()
+        cmd_ok = self._config.commands_enabled()
         if sys.platform == "win32":
-            logger.info("Ready. ctrl_r=command · alt_r=text")
-            self._feedback.notify("Voice Input", "Ready · RCtrl=command · RAlt=text")
+            hint = "RCtrl=cmd · RAlt=text" if cmd_ok else "RAlt=text"
+            logger.info("Ready. %s", hint)
+            self._feedback.notify("Voice Input", f"Ready · {hint}")
         else:
+            cmd_part = "cmd_r=command · " if cmd_ok else ""
             logger.info(
-                "Ready. cmd_r=command · alt_r=text | accessibility: %s",
+                "Ready. %salt_r=text | accessibility: %s",
+                cmd_part,
                 "yes" if ax_ok else "no (paste disabled)",
             )
             if not ax_ok:
@@ -64,9 +68,10 @@ class VoiceInputApp:
                     "Add to Accessibility: System Settings > Privacy & Security > Accessibility"
                 )
                 logger.warning("Binary: %s", accessibility_binary())
+            ui_cmd = "Cmd=cmd · " if cmd_ok else ""
             self._feedback.notify(
                 "Voice Input",
-                "Ready · Cmd=command · Opt=text" + ("" if ax_ok else " · no paste"),
+                f"Ready · {ui_cmd}Opt=text" + ("" if ax_ok else " · no paste"),
             )
         self._config.watch(self._on_config_change)
         self._run_listener()
@@ -100,6 +105,8 @@ class VoiceInputApp:
         )
 
     def _on_press(self, key: Key | KeyCode | None) -> None:
+        if key == COMMAND_KEY and not self._config.commands_enabled():
+            return
         if key in (COMMAND_KEY, TEXT_KEY) and self._active_key is None:
             self._active_key = key
             self._start_recording()

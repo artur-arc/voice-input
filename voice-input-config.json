@@ -9,7 +9,8 @@
     "commands": {
         "language": "auto"
     },
-    "input_device": null,
+    "commands_enabled": false,
+    "input_device": "EMEET SmartCam S600",
     "sounds_enabled": true,
     "notifications_enabled": true
 }

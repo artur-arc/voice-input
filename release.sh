@@ -28,10 +28,21 @@ git tag "$TAG"
 git push origin HEAD
 git push origin "$TAG"
 
-# ── Build Windows zip asset ───────────────────────────────────────────────────
+# ── Build Windows zip assets ──────────────────────────────────────────────────
 ZIP_NAME="voice-input-windows-$NEXT.zip"
+ZIP_PRO="voice-input-pro-$NEXT.zip"
+
+# Public zip — commands_enabled: false (already in config)
 zip -r "$ZIP_NAME" src/ assets/ requirements-windows.txt VERSION voice-input-config.json setup.py install.bat \
   -x "src/__pycache__/*" -x "src/*.pyc" -x "*/.DS_Store"
+
+# Pro zip — commands_enabled: true (temporary config swap)
+jq '.commands_enabled = true' voice-input-config.json > /tmp/_voice_input_pro_config.json
+cp voice-input-config.json /tmp/_voice_input_pub_config.json
+cp /tmp/_voice_input_pro_config.json voice-input-config.json
+zip -r "$ZIP_PRO" src/ assets/ requirements-windows.txt VERSION voice-input-config.json setup.py install.bat \
+  -x "src/__pycache__/*" -x "src/*.pyc" -x "*/.DS_Store"
+cp /tmp/_voice_input_pub_config.json voice-input-config.json
 
 # ── GitHub release notes ──────────────────────────────────────────────────────
 CHANGELOG_SECTION=$(git-cliff --config cliff.toml --latest --strip all 2>/dev/null || echo "")
@@ -58,3 +69,4 @@ rm -f "$ZIP_NAME"
 
 echo ""
 echo "✅ Released $TAG and published to GitHub!"
+echo "📦 Pro build (not uploaded): $(pwd)/$ZIP_PRO"

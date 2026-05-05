@@ -245,22 +245,23 @@ class VoiceInputMenuBar(rumps.App):
         lang_menu.update(lang_items)
         items.append(lang_menu)
 
-        # ── Commands submenu ──────────────────────────────────────────────────
-        cmd_lang = self._config.command_lang()
-        cmd_options = [
-            ("auto", "Auto (follows language)"),
-            ("ru",   "Russian"),
-            ("en",   "English"),
-            ("he",   "Hebrew"),
-        ]
-        cmd_items: list[Any] = []
-        for val, label in cmd_options:
-            item = rumps.MenuItem(label, callback=self._on_cmd_lang)
-            item.state = 1 if cmd_lang == val else 0
-            cmd_items.append(item)
-        cmd_menu = rumps.MenuItem("Commands")
-        cmd_menu.update(cmd_items)
-        items.append(cmd_menu)
+        # ── Commands submenu (only when commands_enabled) ─────────────────────
+        if self._config.commands_enabled():
+            cmd_lang = self._config.command_lang()
+            cmd_options = [
+                ("auto", "Auto (follows language)"),
+                ("ru",   "Russian"),
+                ("en",   "English"),
+                ("he",   "Hebrew"),
+            ]
+            cmd_items: list[Any] = []
+            for val, label in cmd_options:
+                item = rumps.MenuItem(label, callback=self._on_cmd_lang)
+                item.state = 1 if cmd_lang == val else 0
+                cmd_items.append(item)
+            cmd_menu = rumps.MenuItem("Commands")
+            cmd_menu.update(cmd_items)
+            items.append(cmd_menu)
 
         items.append(None)
 

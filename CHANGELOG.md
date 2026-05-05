@@ -2,8 +2,10 @@
 
 All notable changes to voice-input.
 ## [unreleased]
+### 2026-05-05
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`202e0e3`](https://github.com/artur-arc/voice-input/commit/202e0e306d868d1cfdf00f0fa1dd9bea9ca4e628) Enable/disble commands based on config
 ### 2026-05-04
-- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`9ad8dbe`](https://github.com/artur-arc/voice-input/commit/9ad8dbebd69f04afcaa32f30adbf474ff3d6341a) Remove trailing newline from config file
+- ![fix](https://img.shields.io/badge/fix-d73a4a?style=flat-square) [`d9ec6d4`](https://github.com/artur-arc/voice-input/commit/d9ec6d40549c11e37ce0a6cbcf57401eda0617f3) Remove trailing newline from config file
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`c278820`](https://github.com/artur-arc/voice-input/commit/c278820aa3fe2ff1916dc6a392989e8829fe27bd) Consolidate command handling and
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`7e9e059`](https://github.com/artur-arc/voice-input/commit/7e9e059464d9e59ec15459becbace7ddba057430) Split command and text modes, improve configuration
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`1219e84`](https://github.com/artur-arc/voice-input/commit/1219e840fdce659c671681fe8743fdf5398325bb) Update voice command handling for multiple languages
