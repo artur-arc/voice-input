@@ -1,7 +1,7 @@
 # voice-input
 
-Hold <kbd>⌘ Right Cmd</kbd>, speak, release — the transcribed text is pasted at the cursor in any app: browser, notes, chat, code editor, any text field.
-A microphone icon in the menu bar gives access to all settings. <kbd>⌥ Right Option</kbd> cycles language modes as a secondary shortcut.
+Hold <kbd>⌥ Right Option</kbd>, speak, release — the transcribed text is pasted at the cursor in any app: browser, notes, chat, code editor, any text field.
+A microphone icon in the menu bar gives access to all settings.
 
 macOS uses mlx-whisper on Apple Silicon (Neural Engine). Windows uses whisper.cpp (pywhispercpp) on CPU.
 
@@ -96,8 +96,7 @@ If the app is not recording, open **Settings → Privacy & Security → Micropho
 
 | Action | macOS | Windows |
 |---|---|---|
-| Record audio, transcribe, paste | <kbd>⌘ Right Cmd</kbd> (hold → release) | <kbd>Right Ctrl</kbd> (hold → release) |
-| Cycle language modes | <kbd>⌥ Right Option</kbd> (tap) | — |
+| Record audio, transcribe, paste | <kbd>⌥ Right Option</kbd> (hold → release) | <kbd>Right Alt</kbd> (hold → release) |
 
 Language mode and microphone can also be changed from the menu bar icon (macOS) or system
 tray icon (Windows).
@@ -125,7 +124,7 @@ A microphone icon sits in the menu bar (macOS) or system tray (Windows). Click i
 
 ## Language modes
 
-Right Option cycles through the five modes in order:
+Mode is selected from the menu bar icon.
 
 | Mode | Config key | What it does |
 |---|---|---|
@@ -164,8 +163,6 @@ To change the mode manually, set exactly one key to `true` and the rest to `fals
 ```
 
 `"input_device"` — device name string to pin a specific mic, or `null` for auto-select.
-
-Pressing Right Option at runtime has the same effect and updates the file automatically.
 
 ## Service management
 
